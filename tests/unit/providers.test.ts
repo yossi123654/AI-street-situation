@@ -374,7 +374,12 @@ describe("registry", () => {
     restore = withEnv({});
     const statuses = getProviderStatuses();
     const enabled = statuses.filter((s) => s.enabled).map((s) => `${s.kind}:${s.id}`);
-    expect(enabled).toEqual(["geocoding:nominatim", "weather:open-meteo", "cameras:community"]);
+    expect(enabled).toEqual([
+      "geocoding:nominatim",
+      "weather:open-meteo",
+      "cameras:community",
+      "parking:overpass",
+    ]);
     expect(getProvider("traffic")).toBeUndefined();
     expect(getProvider("ai")).toBeUndefined();
   });

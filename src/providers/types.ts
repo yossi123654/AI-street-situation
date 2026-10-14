@@ -4,6 +4,7 @@ import type {
   Incident,
   LatLon,
   Locale,
+  ParkingFacility,
   Place,
   ProviderKind,
   TrafficFlow,
@@ -32,6 +33,11 @@ export interface TrafficProvider {
 
 export interface IncidentsProvider {
   incidents(point: LatLon, radiusM: number, locale: Locale): Promise<Incident[]>;
+}
+
+export interface ParkingProvider {
+  /** Parking facilities within `radiusM` of the point, with distanceM set. */
+  parking(point: LatLon, radiusM: number): Promise<ParkingFacility[]>;
 }
 
 export interface CameraProvider {
@@ -66,6 +72,7 @@ export interface ProviderKindMap {
   traffic: TrafficProvider;
   incidents: IncidentsProvider;
   cameras: CameraProvider;
+  parking: ParkingProvider;
   ai: AiProvider;
 }
 
@@ -79,6 +86,11 @@ export interface ProviderDefinition<K extends ProviderKind = ProviderKind> {
   attribution: string;
   /** Environment variables this provider needs (documentation + status page). */
   requiredEnv: string[];
+  /**
+   * For kinds that merge several providers (cameras, incidents): only the
+   * first enabled provider of the same group is used, e.g. TomTom *or* HERE.
+   */
+  group?: string;
   /** True when the configuration needed by this provider is present. */
   isEnabled(config: AppConfig): boolean;
   create(config: AppConfig): ProviderKindMap[K];

@@ -125,3 +125,16 @@ export const LogoIcon = (p: P) => (
     <circle cx="16" cy="13.3" r="2.7" fill="currentColor" />
   </svg>
 );
+
+export const ParkingIcon = (p: P) => (
+  <Icon {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="3" />
+    <path d="M9.5 17V7h3.5a3 3 0 0 1 0 6H9.5" />
+  </Icon>
+);
+
+export const NavigateIcon = (p: P) => (
+  <Icon {...p}>
+    <path d="M3 11l18-8-8 18-2-8z" />
+  </Icon>
+);

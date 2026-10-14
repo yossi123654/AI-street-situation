@@ -49,6 +49,7 @@ export const hereIncidents: ProviderDefinition<"incidents"> = {
   name: "HERE Traffic Incidents",
   homepage: "https://www.here.com/docs/bundle/traffic-api-developer-guide-v7/page/README.html",
   attribution: "Incidents © HERE",
+  group: "commercial-traffic",
   requiredEnv: ["HERE_API_KEY"],
   isEnabled: (config) => Boolean(config.HERE_API_KEY),
   create(config) {

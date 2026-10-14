@@ -37,9 +37,24 @@ issue or a pull request that updates this file.
 | AI                       | Anthropic API                            | Opt-in   | Yes                     | n/a                   | n/a         | ⚠️                |
 | Cameras / incidents      | Israeli government and municipal sources | No       | —                       | —                     | —           | ❌ (see below)    |
 
-## Map tiles
+## Map
 
-### OpenStreetMap tile server (default)
+### OpenFreeMap vector map (default)
+
+- Style URL: `https://tiles.openfreemap.org/styles/liberty` (`MAP_STYLE_URL`, `MAP_TYPE=vector`)
+- Operator: OpenFreeMap (<https://openfreemap.org>), open source and self-hostable.
+- Terms: the public instance is free with no API keys, no registration and
+  no limits on map views or requests. It is funded by donations and has no SLA.
+- Attribution: "OpenFreeMap © OpenMapTiles Data from OpenStreetMap" is shown
+  on the map (`MAP_STYLE_ATTRIBUTION`). Do not remove it.
+- Rendering: MapLibre GL JS inside Leaflet (`@maplibre/maplibre-gl-leaflet`).
+  MapLibre 6 shapes Hebrew and Arabic labels itself, so no RTL plugin is
+  needed. If WebGL is unavailable or the style cannot load, the app falls
+  back to the raster tiles below.
+- Any other MapLibre-compatible style URL works, including a self-hosted
+  OpenFreeMap or a commercial provider.
+
+### OpenStreetMap raster tiles (fallback, or `MAP_TYPE=raster`)
 
 - URL: `https://tile.openstreetmap.org/{z}/{x}/{y}.png` (`MAP_TILE_URL`)
 - Operator: OpenStreetMap Foundation (OSMF)
@@ -51,9 +66,6 @@ issue or a pull request that updates this file.
   Heavy use is forbidden and can be blocked. Self-hosters expecting real
   traffic should switch `MAP_TILE_URL` to a commercial tile provider or their
   own tile server.
-- Note on OpenFreeMap: OpenFreeMap (<https://openfreemap.org>) is free with no
-  keys, but it serves **vector** tiles only (no raster tiles). Leaflet needs a
-  plugin to render them, so it is not wired in yet. Contributions welcome.
 
 ## Geocoding
 
@@ -122,6 +134,51 @@ default and the UI says so.
   with `in=circle:lat,lon;r=metres`.
 - Commercial terms with a free tier. Attribution "© HERE" is shown.
 
+### Open road-work feeds: WZDx (`WZDX_FEED_URLS`)
+
+- Standard: Work Zone Data Exchange v4, an open GeoJSON specification
+  maintained by the US Department of Transportation
+  (<https://github.com/usdot-jpo-ode/wzdx>). Many US state and city road
+  authorities publish WZDx feeds of road works and detours.
+- Configure one or more feed URLs, comma-separated. Each feed's
+  `feed_info.publisher` is shown as the source and `feed_info.license` is
+  linked. Check each feed's licence before enabling it.
+- Only events that are active now (between `start_date` and `end_date`) and
+  within 2 km of the selected point are shown. Feeds are cached for 5 minutes.
+- Incidents from WZDx are merged with TomTom or HERE incidents.
+- No Israeli authority is known to publish WZDx today. Any authority that
+  starts publishing road works in this format works with no code changes.
+
+## Parking
+
+### OpenStreetMap via the Overpass API (default)
+
+- URL: `https://overpass-api.de/api/interpreter` (`OVERPASS_URL`). Software is
+  open source and self-hostable.
+- Data: OSM features tagged `amenity=parking` near the selected point: name,
+  type (surface, underground, multi-storey, street-side), capacity, accessible
+  spaces, fee, access, opening hours, operator, maximum stay, park & ride.
+  Facilities tagged `access=private` or `access=no` are hidden. Data ©
+  OpenStreetMap contributors, ODbL (attribution shown).
+- **No live occupancy.** OSM describes where parking is, not how full it is.
+  The UI and the AI summary say so explicitly.
+- Usage policy (OSM wiki, Overpass API page): on the main instance, under
+  about 10,000 queries and 1 GB per day is considered safe, counted across all
+  users of an application. Commercial use should use a self-hosted or paid
+  instance. The app sends at most one request at a time to public instances
+  and caches results for 12 hours per ~100 m grid cell and radius.
+- Navigation links (Waze, Google Maps, OpenStreetMap) are plain links that
+  the user opens. No data is sent to those services unless the user clicks.
+
+### Live parking occupancy (❌ not included yet)
+
+- **Ahuzot HaHof (Tel Aviv-Yafo)**: operates the city's public car parks
+  with computerised entry, but we found no published occupancy feed or terms.
+- **Other Israeli municipalities and data.gov.il**: no real-time parking
+  occupancy dataset with clear terms was identified.
+- The `ParkingFacility.occupancy` field and the provider interface are ready
+  for a live source. If you know one with published terms, please open an issue.
+
 ## Cameras
 
 ### Community registry (default)
@@ -164,7 +221,12 @@ terms we cannot show.
 - **Western Wall cameras** (Western Wall Heritage Foundation, thekotel.org):
   public live streams exist, but we found no published reuse terms.
 - **data.gov.il and municipal open-data portals**: no real-time traffic
-  incident or camera dataset with clear terms was identified.
+  incident, road-closure or camera dataset with clear terms was identified.
+  data.gov.il runs CKAN, so a future provider could use its `datastore_search`
+  API if such a dataset appears.
+- **Waze for Cities (Waze data feed)**: real-time incidents and closures, but
+  available only to partner organisations under a data-sharing agreement, so
+  it cannot be a default for a public open-source app.
 
 If you can document terms for any of these, add the camera with
 `"unknown"` permissions (shown as an external link only) or with explicit

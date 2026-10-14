@@ -15,7 +15,7 @@ import type {
   TrafficFlow,
   WeatherData,
 } from "@/lib/types";
-import { getProvider } from "@/providers/registry";
+import { getProvider, getProviders } from "@/providers/registry";
 import type { CameraRegistry } from "@/services/CameraRegistry";
 
 const MINUTE = 60_000;
@@ -85,7 +85,7 @@ export class SituationService {
     const config = getConfig();
     const weatherProvider = getProvider("weather");
     const trafficProvider = getProvider("traffic");
-    const incidentsProvider = getProvider("incidents");
+    const incidentProviders = getProviders("incidents");
     const key3 = `${roundCoord(point.lat, 3)},${roundCoord(point.lon, 3)}`;
 
     const [weather, traffic, incidents, cameras] = await Promise.all([
@@ -114,28 +114,52 @@ export class SituationService {
           sources: uniqueSources(data.map((f) => f.source)),
         };
       }),
-      section<Incident[]>("incidents", Boolean(incidentsProvider), async () => {
-        const data = await this.incidentCache.getOrSet(
-          `${incidentsProvider!.def.id}:${locale}:${key3}`,
-          3 * MINUTE,
-          () => incidentsProvider!.instance.incidents(point, INCIDENT_RADIUS_M, locale),
+      section<Incident[]>("incidents", incidentProviders.length > 0, async () => {
+        // Incidents are merged from every configured source (e.g. TomTom + open WZDx feeds).
+        const results = await Promise.allSettled(
+          incidentProviders.map(({ def, instance }) =>
+            this.incidentCache.getOrSet(`${def.id}:${locale}:${key3}`, 3 * MINUTE, () =>
+              instance.incidents(point, INCIDENT_RADIUS_M, locale),
+            ),
+          ),
         );
-        const sorted = [...data].sort(
-          (a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity),
-        );
-        const fetchedAt = sorted[0]?.source.fetchedAt ?? new Date().toISOString();
+        if (results.every((r) => r.status === "rejected")) {
+          throw (results[0] as PromiseRejectedResult).reason;
+        }
+        const now = new Date().toISOString();
+        const sources: SourceInfo[] = [];
+        const freshness: Freshness[] = [];
+        const all: Incident[] = [];
+        results.forEach((result, i) => {
+          const { def } = incidentProviders[i]!;
+          if (result.status === "rejected") {
+            console.warn(`[situation] incidents from ${def.id} failed:`, result.reason);
+            return;
+          }
+          all.push(...result.value);
+          const first = result.value[0];
+          sources.push(
+            ...(result.value.length > 0
+              ? uniqueSources(result.value.map((x) => x.source))
+              : [
+                  {
+                    providerId: def.id,
+                    name: def.name,
+                    attribution: def.attribution,
+                    url: def.homepage,
+                    fetchedAt: now,
+                  },
+                ]),
+          );
+          freshness.push(
+            freshnessOf("incidents", first?.source.observedAt ?? first?.source.fetchedAt ?? now),
+          );
+        });
+        all.sort((a, b) => (a.distanceM ?? Infinity) - (b.distanceM ?? Infinity));
         return {
-          data: sorted.slice(0, 20),
-          freshness: freshnessOf("incidents", sorted[0]?.source.observedAt ?? fetchedAt),
-          sources: [
-            sorted[0]?.source ?? {
-              providerId: incidentsProvider!.def.id,
-              name: incidentsProvider!.def.name,
-              attribution: incidentsProvider!.def.attribution,
-              url: incidentsProvider!.def.homepage,
-              fetchedAt,
-            },
-          ],
+          data: all.slice(0, 20),
+          freshness: worstFreshness(freshness),
+          sources: uniqueSources(sources),
         };
       }),
       section("cameras", true, async () => {

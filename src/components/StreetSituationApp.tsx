@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CamerasCard } from "@/components/CamerasCard";
 import { Header } from "@/components/Header";
 import { IncidentsCard } from "@/components/IncidentsCard";
+import { ParkingCard } from "@/components/ParkingCard";
 import { CodeIcon, PinIcon, RefreshIcon } from "@/components/icons";
 import { SearchBar } from "@/components/SearchBar";
 import { SourcesPanel } from "@/components/SourcesPanel";
@@ -19,8 +20,10 @@ import type {
   CameraView,
   Locale,
   MapConfig,
+  ParkingFacility,
   Place,
   ProviderStatus,
+  Section,
   SituationReport,
 } from "@/lib/types";
 
@@ -30,6 +33,7 @@ const MapView = dynamic(() => import("@/components/MapView").then((m) => m.MapVi
 });
 
 const NO_CAMERAS: CameraView[] = [];
+const NO_PARKING: ParkingFacility[] = [];
 
 export interface SelectedPlace {
   lat: number;
@@ -48,6 +52,7 @@ interface Props {
   map: MapConfig;
   providers: ProviderStatus[];
   cameraRadiusM: number;
+  parkingRadiusM: number;
 }
 
 export function StreetSituationApp(props: Props) {
@@ -76,10 +81,11 @@ function writePlaceToUrl(place: SelectedPlace) {
   window.history.replaceState(null, "", `?${params.toString()}`);
 }
 
-function AppInner({ map, providers, cameraRadiusM }: Props) {
+function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
   const { t, locale, formatRelative } = useI18n();
   const [place, setPlace] = useState<SelectedPlace | null>(null);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+  const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
   const aiEnabled = providers.some((p) => p.kind === "ai" && p.enabled);
@@ -95,6 +101,7 @@ function AppInner({ map, providers, cameraRadiusM }: Props) {
     (next: SelectedPlace, options: { reverseGeocode?: boolean } = {}) => {
       setPlace(next);
       setSelectedCameraId(null);
+      setSelectedParkingId(null);
       writePlaceToUrl(next);
       if (options.reverseGeocode) {
         apiGet<{ place: Place | null }>(
@@ -150,6 +157,35 @@ function AppInner({ map, providers, cameraRadiusM }: Props) {
       : "error" in reportResult
         ? { status: "error" }
         : { status: "ok", data: reportResult.data };
+
+  // Parking is fetched separately so a slow Overpass response never delays the report.
+  const parkingKey = lat === undefined || lon === undefined ? null : `${lat},${lon},${reloadToken}`;
+  const [parkingResult, setParkingResult] = useState<{
+    key: string;
+    section: Section<ParkingFacility[]>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!parkingKey || lat === undefined || lon === undefined) return;
+    const controller = new AbortController();
+    apiGet<Section<ParkingFacility[]>>(`/api/parking?lat=${lat}&lon=${lon}`, {
+      signal: controller.signal,
+    })
+      .then((section) => setParkingResult({ key: parkingKey, section }))
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setParkingResult({
+            key: parkingKey,
+            section: { status: "unavailable", reason: "error" },
+          });
+        }
+      });
+    return () => controller.abort();
+  }, [parkingKey, lat, lon]);
+
+  const parkingLoading = Boolean(parkingKey) && parkingResult?.key !== parkingKey;
+  const parking = parkingResult?.key === parkingKey ? parkingResult.section : undefined;
+  const parkingFacilities = parking?.status === "ok" ? parking.data : NO_PARKING;
 
   // Ask for the AI summary once the report is in (the server reuses its cached report).
   const summaryKey =
@@ -215,9 +251,12 @@ function AppInner({ map, providers, cameraRadiusM }: Props) {
               config={map}
               place={place}
               cameras={cameras}
+              parking={parkingFacilities}
               selectedCameraId={selectedCameraId}
+              selectedParkingId={selectedParkingId}
               onPick={(point) => selectPlace(point, { reverseGeocode: true })}
               onSelectCamera={setSelectedCameraId}
+              onSelectParking={setSelectedParkingId}
             />
             <p className="pointer-events-none absolute inset-x-2 top-2 z-[1000] mx-auto w-fit rounded-full bg-white/90 px-3 py-1 text-xs text-slate-600 shadow dark:bg-slate-900/90 dark:text-slate-300">
               {t("map.hint")}
@@ -274,12 +313,24 @@ function AppInner({ map, providers, cameraRadiusM }: Props) {
                 </Notice>
               ) : null}
 
-              <SummaryCard report={shown} summary={summary} cameraRadiusM={cameraRadiusM} />
+              <SummaryCard
+                report={shown}
+                summary={summary}
+                parking={parking}
+                parkingRadiusM={parkingRadiusM}
+              />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <WeatherCard section={shown?.weather} />
                 <TrafficCard section={shown?.traffic} />
               </div>
+              <ParkingCard
+                section={parking}
+                loading={parkingLoading}
+                radiusM={parkingRadiusM}
+                selectedId={selectedParkingId}
+                onSelect={setSelectedParkingId}
+              />
               <IncidentsCard section={shown?.incidents} />
               <CamerasCard
                 section={shown?.cameras}
@@ -292,6 +343,7 @@ function AppInner({ map, providers, cameraRadiusM }: Props) {
           )}
           <SourcesPanel
             report={shown}
+            parking={parking}
             providers={providers}
             summary={summary.status === "ok" ? summary.data : undefined}
           />

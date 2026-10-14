@@ -108,6 +108,32 @@ describe("buildSummaryFacts", () => {
     expect(facts.externalData.incidents).toMatchObject({ count: 0 });
     expect(facts.observedInCameraImages).toMatchObject({ missing: expect.any(String) });
     expect(facts.missingOrStale).toEqual(["weather", "traffic", "cameras"]);
+    expect(facts.externalData.parking).toEqual({ missing: "not_requested" });
+  });
+
+  it("summarises parking without claiming live availability", () => {
+    const report = {
+      location: { lat: 1, lon: 2 },
+      generatedAt: "",
+      weather: unavailable,
+      traffic: unavailable,
+      incidents: unavailable,
+      cameras: ok([]),
+      missing: [],
+      confidence: "low",
+    } as unknown as SituationReport;
+    const parking = ok([
+      { id: "a", distanceM: 120, access: "public", fee: "no" },
+      { id: "b", distanceM: 300, access: "customers", fee: "yes" },
+    ] as never);
+    const facts = buildSummaryFacts(report, [], { section: parking, radiusM: 800 });
+    expect(facts.externalData.parking).toMatchObject({
+      facilitiesFound: 2,
+      publicFacilities: 1,
+      freeOfCharge: 1,
+      nearestDistanceM: 120,
+      liveOccupancy: expect.stringContaining("not available"),
+    });
   });
 });
 

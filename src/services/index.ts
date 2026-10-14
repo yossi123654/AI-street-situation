@@ -2,6 +2,7 @@ import { CameraAvailabilityService } from "@/services/CameraAvailabilityService"
 import { CameraImageService } from "@/services/CameraImageService";
 import { CameraRegistry } from "@/services/CameraRegistry";
 import { LocationService } from "@/services/LocationService";
+import { ParkingService } from "@/services/ParkingService";
 import { SituationService } from "@/services/SituationService";
 import { SituationSummaryService } from "@/services/SituationSummaryService";
 import { VisionAnalyzer } from "@/services/VisionAnalyzer";
@@ -14,8 +15,9 @@ function createServices() {
   const availability = new CameraAvailabilityService(images);
   const vision = new VisionAnalyzer(images);
   const situation = new SituationService(cameras);
-  const summary = new SituationSummaryService(situation, cameras, vision);
-  return { location, cameras, images, availability, vision, situation, summary };
+  const parking = new ParkingService();
+  const summary = new SituationSummaryService(situation, cameras, vision, parking);
+  return { location, cameras, images, availability, vision, situation, parking, summary };
 }
 
 export type Services = ReturnType<typeof createServices>;

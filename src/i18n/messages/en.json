@@ -27,7 +27,8 @@
     "hint": "Click anywhere on the map to choose a location.",
     "selected": "Selected location",
     "cameraEmbed": "Camera (image available)",
-    "cameraLink": "Camera (external link only)"
+    "cameraLink": "Camera (external link only)",
+    "parking": "Parking"
   },
   "empty": {
     "title": "Choose a place to get a situation report",
@@ -216,5 +217,47 @@
     "seconds": "{value} s",
     "kmh": "{value} km/h",
     "mm": "{value} mm"
+  },
+  "parking": {
+    "title": "Parking",
+    "loading": "Looking for parking nearby…",
+    "none": "No public parking found within {radius} in OpenStreetMap.",
+    "count": "{count} parking facilities within {radius}",
+    "noOccupancy": "No live occupancy data: OpenStreetMap describes where parking is, its size and fees, not how full it is right now.",
+    "unnamed": "Unnamed parking",
+    "overview": "Parking: {count} within {radius}",
+    "capacity": "{count} spaces",
+    "disabled": "{count} accessible",
+    "hours": "Hours: {hours}",
+    "maxStay": "Max stay: {value}",
+    "parkRide": "Park & Ride",
+    "operator": "Operator: {name}",
+    "navigate": "Navigate",
+    "filteredNone": "No parking matches these filters.",
+    "kind": {
+      "surface": "Surface lot",
+      "underground": "Underground",
+      "multi-storey": "Multi-storey",
+      "street-side": "Street parking",
+      "rooftop": "Rooftop",
+      "unknown": "Parking"
+    },
+    "fee": {
+      "yes": "Paid",
+      "no": "Free",
+      "unknown": "Fee unknown"
+    },
+    "access": {
+      "public": "Public",
+      "customers": "Customers only",
+      "unknown": "Access unknown"
+    },
+    "filter": {
+      "label": "Filter parking",
+      "all": "All",
+      "free": "Free only",
+      "public": "Public only"
+    },
+    "freeNow": "{count} free now"
   }
 }

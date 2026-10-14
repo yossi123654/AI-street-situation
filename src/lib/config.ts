@@ -58,6 +58,20 @@ const schema = z.object({
   TOMTOM_URL: url("https://api.tomtom.com"),
   HERE_API_KEY: optionalString,
   HERE_TRAFFIC_URL: url("https://data.traffic.hereapi.com"),
+  /** Comma-separated URLs of WZDx v4 road-work feeds published by road authorities. */
+  WZDX_FEED_URLS: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(",")
+            .map((u) => u.trim())
+            .filter(Boolean)
+        : [],
+    )
+    .pipe(z.array(z.url({ protocol: /^https?$/ }))),
 
   CAMERA_DATA_DIR: z.string().trim().default("data/cameras"),
   CAMERA_SEARCH_RADIUS_M: int(3000, 100, 50000),
@@ -65,6 +79,10 @@ const schema = z.object({
   TFL_API_URL: url("https://api.tfl.gov.uk"),
   /** Testing only: allow http:// and private hosts for camera media. Never enable in production. */
   DEV_ALLOW_INSECURE_MEDIA: bool(false),
+
+  PARKING_ENABLED: bool(true),
+  OVERPASS_URL: url("https://overpass-api.de/api/interpreter"),
+  PARKING_SEARCH_RADIUS_M: int(800, 100, 3000),
 
   AI_PROVIDER: z.enum(["ollama", "anthropic", ""]).default(""),
   OLLAMA_URL: optionalString,
@@ -74,6 +92,15 @@ const schema = z.object({
   ANTHROPIC_URL: url("https://api.anthropic.com"),
   AI_TIMEOUT_MS: int(60000, 1000, 300000),
 
+  /** "vector" (OpenFreeMap / any MapLibre style) or "raster" (classic tile URL). */
+  MAP_TYPE: z.enum(["vector", "raster"]).default("vector"),
+  MAP_STYLE_URL: url("https://tiles.openfreemap.org/styles/liberty"),
+  MAP_STYLE_ATTRIBUTION: z
+    .string()
+    .trim()
+    .default(
+      '<a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
+    ),
   MAP_TILE_URL: z.string().trim().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   MAP_ATTRIBUTION: z
     .string()

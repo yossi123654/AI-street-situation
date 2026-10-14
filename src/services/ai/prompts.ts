@@ -31,6 +31,7 @@ export function summarySystemPrompt(locale: Locale): string {
     "Use ONLY the facts in the provided JSON. Never invent incidents, numbers, places, or causes.",
     'Clearly separate what was observed in camera images ("observedInCameraImages") from data reported by external providers ("externalData").',
     'If a category is missing, say briefly that there is no data for it. If a value has freshness "stale" or "unknown", say it may not be current and do not describe it as happening now.',
+    "Mention parking briefly only if parking data is present, and never claim that spaces are free or full: there is no live occupancy data.",
     "Never mention or infer anything about identifiable people or licence plates.",
     `Write in ${LANGUAGE_NAME[locale]}. Use 2 to 5 sentences of plain text: no markdown, no lists, no headings.`,
   ].join("\n");

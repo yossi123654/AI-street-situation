@@ -94,6 +94,30 @@ export interface Incident {
   source: SourceInfo;
 }
 
+export type ParkingKind =
+  "surface" | "underground" | "multi-storey" | "street-side" | "rooftop" | "unknown";
+
+export interface ParkingFacility {
+  id: string;
+  name?: string;
+  lat: number;
+  lon: number;
+  distanceM: number;
+  kind: ParkingKind;
+  capacity: number | null;
+  capacityDisabled: number | null;
+  fee: "yes" | "no" | "unknown";
+  access: "public" | "customers" | "unknown";
+  /** Raw OSM opening_hours value, e.g. "Mo-Fr 07:00-22:00". */
+  openingHours?: string;
+  operator?: string;
+  maxStay?: string;
+  parkAndRide: boolean;
+  /** Real-time occupancy. Only set by providers that publish live data. */
+  occupancy?: { free: number | null; total: number | null; observedAt: string };
+  source: SourceInfo;
+}
+
 export type Permission = true | false | "unknown";
 
 export interface Camera {
@@ -200,9 +224,12 @@ export interface ProviderStatus {
   homepage: string;
 }
 
-export type ProviderKind = "geocoding" | "weather" | "traffic" | "incidents" | "cameras" | "ai";
+export type ProviderKind =
+  "geocoding" | "weather" | "traffic" | "incidents" | "cameras" | "parking" | "ai";
 
 export interface MapConfig {
+  /** Vector style (MapLibre) when set; the raster tiles are the fallback. */
+  vector: { styleUrl: string; attribution: string } | null;
   tileUrl: string;
   attribution: string;
   maxZoom: number;

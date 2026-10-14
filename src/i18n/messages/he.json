@@ -27,7 +27,8 @@
     "hint": "לחצו על המפה כדי לבחור מיקום.",
     "selected": "המיקום שנבחר",
     "cameraEmbed": "מצלמה (תמונה זמינה)",
-    "cameraLink": "מצלמה (קישור חיצוני בלבד)"
+    "cameraLink": "מצלמה (קישור חיצוני בלבד)",
+    "parking": "חניון"
   },
   "empty": {
     "title": "בחרו מקום כדי לקבל תמונת מצב",
@@ -216,5 +217,47 @@
     "seconds": "{value} שנ׳",
     "kmh": "{value} קמ״ש",
     "mm": "{value} מ״מ"
+  },
+  "parking": {
+    "title": "חניה",
+    "loading": "מחפש חניה בקרבת מקום…",
+    "none": "לא נמצאו חניונים ציבוריים בטווח {radius} לפי OpenStreetMap.",
+    "count": "{count} חניונים בטווח {radius}",
+    "noOccupancy": "אין נתוני תפוסה בזמן אמת: OpenStreetMap מתאר את מיקום החניונים, גודלם והתשלום, אבל לא כמה מקומות פנויים עכשיו.",
+    "unnamed": "חניון ללא שם",
+    "overview": "חניה: {count} חניונים בטווח {radius}",
+    "capacity": "{count} מקומות",
+    "disabled": "{count} מקומות נכים",
+    "hours": "שעות: {hours}",
+    "maxStay": "זמן חניה מרבי: {value}",
+    "parkRide": "חנה וסע",
+    "operator": "מפעיל: {name}",
+    "navigate": "ניווט",
+    "filteredNone": "אין חניונים שמתאימים לסינון.",
+    "kind": {
+      "surface": "מגרש חניה",
+      "underground": "תת-קרקעי",
+      "multi-storey": "רב-קומות",
+      "street-side": "חניה ברחוב",
+      "rooftop": "על הגג",
+      "unknown": "חניה"
+    },
+    "fee": {
+      "yes": "בתשלום",
+      "no": "חינם",
+      "unknown": "תשלום לא ידוע"
+    },
+    "access": {
+      "public": "ציבורי",
+      "customers": "ללקוחות בלבד",
+      "unknown": "גישה לא ידועה"
+    },
+    "filter": {
+      "label": "סינון חניונים",
+      "all": "הכל",
+      "free": "רק חינם",
+      "public": "רק ציבוריים"
+    },
+    "freeNow": "{count} מקומות פנויים"
   }
 }

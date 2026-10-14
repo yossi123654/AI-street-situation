@@ -52,7 +52,12 @@ function nominatimResult(place, lang, id) {
 }
 
 function send(res, status, body, type = "application/json") {
-  res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store" });
+  // Real tile/style hosts send CORS headers; the browser needs them for the vector map.
+  res.writeHead(status, {
+    "Content-Type": type,
+    "Cache-Control": "no-store",
+    "Access-Control-Allow-Origin": "*",
+  });
   res.end(typeof body === "string" || Buffer.isBuffer(body) ? body : JSON.stringify(body));
 }
 
@@ -64,11 +69,91 @@ function readBody(req) {
   });
 }
 
+function vectorStyle() {
+  const streets = [];
+  for (let i = -12; i <= 12; i++) {
+    const major = i % 4 === 0;
+    streets.push({
+      type: "Feature",
+      properties: { major },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [35.17, 31.7833 + i * 0.0025],
+          [35.27, 31.7833 + i * 0.0025],
+        ],
+      },
+    });
+    streets.push({
+      type: "Feature",
+      properties: { major },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [35.2186 + i * 0.003, 31.74],
+          [35.2186 + i * 0.003, 31.83],
+        ],
+      },
+    });
+  }
+  const blocks = [];
+  for (let x = -6; x < 6; x++) {
+    for (let y = -6; y < 6; y++) {
+      if ((x * 7 + y * 3) % 5 !== 0) continue;
+      const lon = 35.2186 + x * 0.003 + 0.0005;
+      const lat = 31.7833 + y * 0.0025 + 0.0004;
+      blocks.push({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [lon, lat],
+              [lon + 0.002, lat],
+              [lon + 0.002, lat + 0.0017],
+              [lon, lat + 0.0017],
+              [lon, lat],
+            ],
+          ],
+        },
+      });
+    }
+  }
+  return {
+    version: 8,
+    name: "Test fixture style",
+    sources: {
+      streets: { type: "geojson", data: { type: "FeatureCollection", features: streets } },
+      parks: { type: "geojson", data: { type: "FeatureCollection", features: blocks } },
+    },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#f2efe9" } },
+      { id: "parks", type: "fill", source: "parks", paint: { "fill-color": "#d8e8c8" } },
+      {
+        id: "streets-casing",
+        type: "line",
+        source: "streets",
+        paint: { "line-color": "#d6d0c4", "line-width": ["case", ["get", "major"], 9, 5] },
+      },
+      {
+        id: "streets",
+        type: "line",
+        source: "streets",
+        paint: {
+          "line-color": ["case", ["get", "major"], "#fcd6a4", "#ffffff"],
+          "line-width": ["case", ["get", "major"], 7, 3.5],
+        },
+      },
+    ],
+  };
+}
+
 // Builds a summary from the facts JSON in the prompt, like a (very literal) model would.
 function summaryText(prompt, he) {
   const facts = JSON.parse(prompt.slice(prompt.indexOf("{"), prompt.lastIndexOf("}") + 1));
   const place = facts.location.split(",")[0];
-  const { trafficFlow, incidents, weather } = facts.externalData;
+  const { trafficFlow, incidents, weather, parking } = facts.externalData;
   const parts = [];
   if (trafficFlow.roads) {
     const r = trafficFlow.roads[0];
@@ -90,6 +175,12 @@ function summaryText(prompt, he) {
       he
         ? `מזג האוויר בהיר ונעים, ${Math.round(weather.temperatureC)} מעלות.`
         : `The weather is clear and mild at ${Math.round(weather.temperatureC)} °C.`,
+    );
+  if (parking.facilitiesFound)
+    parts.push(
+      he
+        ? `יש ${parking.facilitiesFound} חניונים בטווח ${parking.searchRadiusM} מ׳, הקרוב במרחק ${parking.nearestDistanceM} מ׳ (אין נתוני תפוסה).`
+        : `There are ${parking.facilitiesFound} parking facilities within ${parking.searchRadiusM} m, the nearest ${parking.nearestDistanceM} m away (no occupancy data).`,
     );
   if (Array.isArray(facts.observedInCameraImages))
     parts.push(
@@ -244,6 +335,150 @@ const server = createServer(async (req, res) => {
       done: true,
     });
   }
+
+  // --- Overpass (parking) ---
+  if (p === "/overpass/api/interpreter" && req.method === "POST") {
+    const query = new URLSearchParams(await readBody(req)).get("data") ?? "";
+    const around = query.match(/around:(\d+),([-\d.]+),([-\d.]+)/);
+    const [lat, lon] = around ? [Number(around[2]), Number(around[3])] : [JAFFA.lat, JAFFA.lon];
+    const at = (dLat, dLon) => ({ lat: lat + dLat, lon: lon + dLon });
+    return send(res, 200, {
+      osm3s: { timestamp_osm_base: new Date(Date.now() - 120_000).toISOString() },
+      elements: [
+        {
+          type: "way",
+          id: 101,
+          center: at(0.0012, -0.0009),
+          tags: {
+            amenity: "parking",
+            name: "חניון כלל",
+            parking: "underground",
+            fee: "yes",
+            access: "yes",
+            capacity: "350",
+            "capacity:disabled": "8",
+            opening_hours: "24/7",
+            operator: "אחוזת בית",
+          },
+        },
+        {
+          type: "way",
+          id: 102,
+          center: at(-0.0021, 0.0016),
+          tags: {
+            amenity: "parking",
+            name: "חניון הדווידקה",
+            parking: "surface",
+            fee: "no",
+            capacity: "60",
+          },
+        },
+        {
+          type: "way",
+          id: 103,
+          center: at(0.0035, 0.0028),
+          tags: {
+            amenity: "parking",
+            name: "חניון ממילא",
+            parking: "multi-storey",
+            fee: "yes",
+            access: "yes",
+            capacity: "1600",
+            opening_hours: "Su-Th 06:00-02:00; Fr 06:00-15:00",
+          },
+        },
+        {
+          type: "node",
+          id: 104,
+          ...at(-0.0008, -0.0031),
+          tags: { amenity: "parking", parking: "street_side", fee: "yes" },
+        },
+        {
+          type: "way",
+          id: 105,
+          center: at(0.0004, 0.0022),
+          tags: { amenity: "parking", name: "חניון לקוחות בלבד", access: "customers", fee: "no" },
+        },
+        {
+          type: "way",
+          id: 106,
+          center: at(0.0002, 0.0002),
+          tags: { amenity: "parking", name: "Private", access: "private" },
+        },
+        {
+          type: "way",
+          id: 107,
+          center: at(0.05, 0.05),
+          tags: { amenity: "parking", name: "Too far" },
+        },
+      ],
+    });
+  }
+
+  // --- WZDx road-work feed ---
+  if (p === "/wzdx/feed.json") {
+    const day = 86_400_000;
+    return send(res, 200, {
+      feed_info: {
+        publisher: "Example Road Authority",
+        version: "4.2",
+        license: "https://creativecommons.org/publicdomain/zero/1.0/",
+        update_date: new Date(Date.now() - 60_000).toISOString(),
+        data_sources: [{ data_source_id: "1", organization_name: "Example Road Authority" }],
+      },
+      type: "FeatureCollection",
+      features: [
+        {
+          id: "wz-active",
+          type: "Feature",
+          properties: {
+            core_details: {
+              event_type: "work-zone",
+              data_source_id: "1",
+              road_names: ["Jaffa Rd"],
+              direction: "eastbound",
+              description: "Light rail track maintenance",
+            },
+            start_date: new Date(Date.now() - day).toISOString(),
+            end_date: new Date(Date.now() + day).toISOString(),
+            vehicle_impact: "some-lanes-closed",
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [35.2195, 31.7838],
+              [35.2215, 31.7845],
+            ],
+          },
+        },
+        {
+          id: "wz-expired",
+          type: "Feature",
+          properties: {
+            core_details: {
+              event_type: "work-zone",
+              data_source_id: "1",
+              road_names: ["Old Rd"],
+              direction: "unknown",
+            },
+            start_date: new Date(Date.now() - 10 * day).toISOString(),
+            end_date: new Date(Date.now() - day).toISOString(),
+            vehicle_impact: "all-lanes-closed",
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [35.2186, 31.7833],
+              [35.219, 31.7835],
+            ],
+          },
+        },
+      ],
+    });
+  }
+
+  // --- Vector map style (MapLibre) with a synthetic street grid ---
+  if (p === "/style.json") return send(res, 200, vectorStyle());
 
   // --- Camera images and map tiles ---
   if (p === "/images/jaffa-center.jpg") {

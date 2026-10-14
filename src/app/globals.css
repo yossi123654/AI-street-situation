@@ -36,6 +36,7 @@
 }
 
 .camera-marker,
+.parking-marker,
 .place-marker {
   background: transparent;
   border: none;

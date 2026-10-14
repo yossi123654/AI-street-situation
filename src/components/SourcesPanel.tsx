@@ -3,15 +3,30 @@
 import { InfoIcon } from "@/components/icons";
 import { Card, cx } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { AiSummary, ProviderStatus, SituationReport, SourceInfo } from "@/lib/types";
+import type {
+  AiSummary,
+  ParkingFacility,
+  ProviderStatus,
+  Section,
+  SituationReport,
+  SourceInfo,
+} from "@/lib/types";
 
 function collectSources(
   report: SituationReport | undefined,
+  parking: Section<ParkingFacility[]> | undefined,
   summary: AiSummary | undefined,
 ): SourceInfo[] {
   if (!report) return [];
   const all: SourceInfo[] = [];
-  for (const section of [report.weather, report.traffic, report.incidents, report.cameras]) {
+  const sections = [
+    report.weather,
+    report.traffic,
+    report.incidents,
+    report.cameras,
+    ...(parking ? [parking] : []),
+  ];
+  for (const section of sections) {
     if (section.status === "ok") all.push(...section.sources);
   }
   if (summary) {
@@ -29,15 +44,17 @@ function collectSources(
 
 export function SourcesPanel({
   report,
+  parking,
   providers,
   summary,
 }: {
   report: SituationReport | undefined;
+  parking: Section<ParkingFacility[]> | undefined;
   providers: ProviderStatus[];
   summary: AiSummary | undefined;
 }) {
   const { t, formatRelative } = useI18n();
-  const sources = collectSources(report, summary);
+  const sources = collectSources(report, parking, summary);
   return (
     <Card id="sources" title={t("sources.title")} icon={<InfoIcon />}>
       {sources.length > 0 ? (
