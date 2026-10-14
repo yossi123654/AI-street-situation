@@ -1,0 +1,220 @@
+{
+  "app": {
+    "title": "תמונת מצב",
+    "tagline": "מה קורה עכשיו בכל רחוב, צומת או אזור: תנועה, אירועים, מזג אוויר ומצלמות ציבוריות.",
+    "github": "קוד המקור ב-GitHub",
+    "language": "שפה"
+  },
+  "search": {
+    "placeholder": "הקלידו רחוב, כתובת, צומת או אזור, למשל: רחוב יפו, ירושלים",
+    "label": "חיפוש מקום",
+    "submit": "חיפוש",
+    "searching": "מחפש…",
+    "myLocation": "המיקום שלי",
+    "locating": "מאתר מיקום…",
+    "noResults": "לא נמצאו מקומות עבור „{query}”. נסו להוסיף שם עיר.",
+    "chooseResult": "נמצאו כמה מקומות מתאימים. בחרו אחד:",
+    "error": "החיפוש אינו זמין כרגע. נסו שוב בעוד רגע.",
+    "geolocationError": "לא הצלחנו לאתר את המיקום שלכם.",
+    "tooShort": "הקלידו לפחות 2 תווים.",
+    "examples": "נסו:",
+    "example1": "רחוב יפו, ירושלים",
+    "example2": "צומת עזריאלי, תל אביב",
+    "example3": "Trafalgar Square, London"
+  },
+  "map": {
+    "label": "מפה",
+    "hint": "לחצו על המפה כדי לבחור מיקום.",
+    "selected": "המיקום שנבחר",
+    "cameraEmbed": "מצלמה (תמונה זמינה)",
+    "cameraLink": "מצלמה (קישור חיצוני בלבד)"
+  },
+  "empty": {
+    "title": "בחרו מקום כדי לקבל תמונת מצב",
+    "body": "חפשו רחוב או כתובת, או לחצו על המפה. תקבלו תנועה, אירועים ומזג אוויר מהמקורות המוגדרים, ומצלמות ציבוריות סמוכות כשתנאי השימוש שלהן מאפשרים זאת."
+  },
+  "report": {
+    "loading": "אוסף נתונים מהמקורות…",
+    "error": "לא הצלחנו להרכיב את תמונת המצב. נסו שוב.",
+    "retry": "נסו שוב",
+    "updated": "עודכן {time}",
+    "refresh": "רענון"
+  },
+  "freshness": {
+    "live": "בזמן אמת",
+    "recent": "עדכני חלקית",
+    "stale": "מידע ישן",
+    "unknown": "זמן לא ידוע"
+  },
+  "confidence": {
+    "label": "שלמות הנתונים",
+    "high": "גבוהה",
+    "medium": "חלקית",
+    "low": "נמוכה"
+  },
+  "missing": {
+    "title": "נתונים חסרים או ישנים",
+    "weather": "אין נתוני מזג אוויר",
+    "traffic": "אין נתוני זרימת תנועה",
+    "incidents": "אין נתוני אירועי תנועה",
+    "cameras": "אין מצלמות מורשות בקרבת מקום",
+    "weather_stale": "נתוני מזג האוויר ישנים",
+    "traffic_stale": "נתוני התנועה ישנים",
+    "incidents_stale": "נתוני האירועים ישנים"
+  },
+  "section": {
+    "notConfigured": "אין נתונים ממקור זה: לא הוגדר ספק.",
+    "notConfiguredHint": "מי שמריץ את השרת יכול להפעיל ספק בקובץ ‎.env‎ – פרטים ב-README.",
+    "error": "מקור הנתונים אינו זמין כרגע.",
+    "noData": "הספק לא החזיר נתונים למיקום הזה."
+  },
+  "summary": {
+    "title": "סיכום",
+    "aiTitle": "סיכום AI",
+    "generating": "כותב סיכום AI מהנתונים שנאספו…",
+    "notConfigured": "סיכום ה-AI כבוי: לא הוגדר ספק AI בשרת הזה.",
+    "notConfiguredHint": "הגדירו OLLAMA_URL (מקומי וחינמי) או ANTHROPIC_API_KEY כדי להפעיל.",
+    "error": "לא ניתן היה ליצור סיכום AI כרגע.",
+    "generatedBy": "נוצר על ידי {provider} ‏({model}) מהנתונים שלהלן. AI עלול לטעות.",
+    "overview": "במבט מהיר",
+    "basedOnCamera": "כולל ניתוח של התמונה מהמצלמה: {camera}"
+  },
+  "weather": {
+    "title": "מזג אוויר",
+    "feelsLike": "מורגש כמו {value}",
+    "humidity": "לחות",
+    "wind": "רוח",
+    "precipitation": "משקעים",
+    "visibility": "ראות",
+    "cloudCover": "עננות",
+    "overview": "מזג אוויר: {temp}, {condition}"
+  },
+  "wmo": {
+    "clear": "בהיר",
+    "mainlyClear": "בהיר ברובו",
+    "partlyCloudy": "מעונן חלקית",
+    "overcast": "מעונן",
+    "fog": "ערפל",
+    "drizzle": "טפטוף",
+    "freezingDrizzle": "טפטוף קופא",
+    "rain": "גשם",
+    "freezingRain": "גשם קופא",
+    "snow": "שלג",
+    "showers": "ממטרים",
+    "snowShowers": "ממטרי שלג",
+    "thunderstorm": "סופת רעמים",
+    "unknown": "תנאים לא ידועים"
+  },
+  "traffic": {
+    "title": "תנועה",
+    "speed": "{current} קמ״ש (בדרך כלל {free} קמ״ש)",
+    "nearestRoad": "הכביש הקרוב",
+    "overview": "תנועה: {level}",
+    "level": {
+      "free": "זורמת",
+      "moderate": "בינונית",
+      "heavy": "כבדה",
+      "severe": "כבדה מאוד",
+      "closed": "הכביש חסום",
+      "unknown": "לא ידוע"
+    }
+  },
+  "incidents": {
+    "title": "אירועים",
+    "none": "לא דווחו אירועים פעילים בטווח {radius}.",
+    "count": "{count} אירועים פעילים בטווח {radius}",
+    "overview": "אירועים: {count} בקרבת מקום",
+    "overviewNone": "אירועים: לא דווחו בקרבת מקום",
+    "away": "במרחק {distance}",
+    "roadClosed": "כביש חסום",
+    "until": "עד {time}",
+    "type": {
+      "accident": "תאונה",
+      "roadworks": "עבודות בכביש",
+      "closure": "חסימה",
+      "congestion": "עומס",
+      "hazard": "מפגע",
+      "weather": "מפגע מזג אוויר",
+      "event": "אירוע",
+      "breakdown": "רכב תקוע",
+      "other": "אירוע"
+    },
+    "severity": {
+      "minor": "קל",
+      "moderate": "בינוני",
+      "major": "חמור",
+      "unknown": "חומרה לא ידועה"
+    }
+  },
+  "cameras": {
+    "title": "מצלמות",
+    "none": "אין מצלמות ציבוריות מאומתות בטווח {radius}. תמונת המצב מתבססת על המקורות האחרים.",
+    "count": "{count} מצלמות בטווח {radius}",
+    "overview": "מצלמות: {count} בקרבת מקום",
+    "away": "במרחק {distance}",
+    "linkOnly": "קישור חיצוני בלבד",
+    "linkOnlyExplain": "תנאי השימוש של המקור לא מתירים במפורש להציג את התמונה כאן, ולכן מוצג רק קישור.",
+    "openSource": "פתיחה באתר המקור",
+    "imageAlt": "תמונה עדכנית מהמצלמה {name}",
+    "imageError": "תמונת המצלמה אינה זמינה כרגע.",
+    "imageTime": "זמן התמונה: {time}",
+    "imageTimeUnknown": "זמן התמונה לא ידוע",
+    "refreshEvery": "מתרענן כל {interval}",
+    "operator": "מפעיל: {name}",
+    "license": "תנאי שימוש",
+    "analyze": "ניתוח AI",
+    "analyzing": "מנתח את התמונה…",
+    "analysisTitle": "מה רואים בתמונה",
+    "analysisError": "ניתוח התמונה נכשל.",
+    "analysisNotAllowed": "ניתוח AI אינו מותר עבור מצלמה זו.",
+    "analysisDisclaimer": "על סמך התמונה בלבד. רמת אי-ודאות: {level}.",
+    "uncertainty": {
+      "low": "נמוכה",
+      "medium": "בינונית",
+      "high": "גבוהה"
+    },
+    "visibility": "ראות: {value}",
+    "visibilityLevel": {
+      "good": "טובה",
+      "moderate": "בינונית",
+      "poor": "גרועה",
+      "unknown": "לא ידועה"
+    },
+    "trafficLevel": {
+      "none": "אין תנועה",
+      "light": "תנועה דלילה",
+      "moderate": "תנועה בינונית",
+      "heavy": "תנועה כבדה",
+      "standstill": "פקק עומד",
+      "unknown": "מצב התנועה לא ברור"
+    },
+    "type": {
+      "traffic": "מצלמת תנועה",
+      "scenic": "מצלמת נוף",
+      "public": "מצלמה ציבורית"
+    },
+    "select": "הצגת המצלמה",
+    "selected": "מוצגת"
+  },
+  "sources": {
+    "title": "מקורות וייחוס",
+    "fetched": "נמשך {time}",
+    "observed": "נתונים מ{time}",
+    "providers": "ספקי נתונים בשרת זה",
+    "enabled": "פעיל",
+    "disabled": "לא מוגדר",
+    "requires": "נדרש: {env}",
+    "privacy": "בלי חשבונות, בלי מעקב, בלי analytics. תמונות מצלמה אינן נשמרות."
+  },
+  "time": {
+    "justNow": "עכשיו"
+  },
+  "units": {
+    "km": "{value} ק״מ",
+    "m": "{value} מ׳",
+    "minutes": "{value} דק׳",
+    "seconds": "{value} שנ׳",
+    "kmh": "{value} קמ״ש",
+    "mm": "{value} מ״מ"
+  }
+}

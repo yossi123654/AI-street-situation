@@ -1,0 +1,68 @@
+{
+  "cameras": [
+    {
+      "id": "il-test-jaffa-center",
+      "name": "Jaffa St / King George (test fixture)",
+      "description": "Fictional camera used only by the automated tests.",
+      "country": "il",
+      "city": "test",
+      "location": { "lat": 31.7827, "lon": 35.2165 },
+      "cameraType": "traffic",
+      "mediaType": "image",
+      "sourceUrl": "http://127.0.0.1:4010/pages/jaffa-center",
+      "mediaUrl": "http://127.0.0.1:4010/images/jaffa-center.jpg",
+      "operator": { "name": "Fixture Operator" },
+      "license": {
+        "name": "Test fixture",
+        "termsUrl": "http://127.0.0.1:4010/pages/terms",
+        "attribution": "Test fixture imagery"
+      },
+      "permissions": {
+        "embedAllowed": true,
+        "aiAnalysisAllowed": true,
+        "commercialUseAllowed": false
+      },
+      "refreshSeconds": 60,
+      "verification": { "lastVerified": "2026-10-14", "verifiedBy": "tests" }
+    },
+    {
+      "id": "il-test-mahane-yehuda",
+      "name": "Mahane Yehuda (test fixture, link only)",
+      "country": "il",
+      "city": "test",
+      "location": { "lat": 31.7853, "lon": 35.2122 },
+      "cameraType": "public",
+      "mediaType": "link",
+      "sourceUrl": "http://127.0.0.1:4010/pages/mahane-yehuda",
+      "operator": { "name": "Fixture Operator" },
+      "license": { "name": "Unknown", "termsUrl": "http://127.0.0.1:4010/pages/terms" },
+      "permissions": {
+        "embedAllowed": "unknown",
+        "aiAnalysisAllowed": "unknown",
+        "commercialUseAllowed": "unknown"
+      },
+      "refreshSeconds": 300,
+      "verification": { "lastVerified": "2026-10-14", "verifiedBy": "tests" }
+    },
+    {
+      "id": "il-test-broken",
+      "name": "Broken camera (test fixture)",
+      "country": "il",
+      "city": "test",
+      "location": { "lat": 31.7801, "lon": 35.224 },
+      "cameraType": "traffic",
+      "mediaType": "image",
+      "sourceUrl": "http://127.0.0.1:4010/pages/broken",
+      "mediaUrl": "http://127.0.0.1:4010/images/broken.jpg",
+      "operator": { "name": "Fixture Operator" },
+      "license": { "name": "Test fixture", "termsUrl": "http://127.0.0.1:4010/pages/terms" },
+      "permissions": {
+        "embedAllowed": true,
+        "aiAnalysisAllowed": false,
+        "commercialUseAllowed": false
+      },
+      "refreshSeconds": 60,
+      "verification": { "lastVerified": "2026-10-14", "verifiedBy": "tests" }
+    }
+  ]
+}

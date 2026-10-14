@@ -1,0 +1,74 @@
+import { defineConfig, devices } from "@playwright/test";
+
+const MOCK = "http://127.0.0.1:4010";
+
+/** Full configuration: every provider enabled, pointed at the mock upstream. */
+const fullEnv = {
+  NEXT_TELEMETRY_DISABLED: "1",
+  NOMINATIM_URL: `${MOCK}/nominatim`,
+  OPEN_METEO_URL: `${MOCK}/open-meteo`,
+  TOMTOM_API_KEY: "test-key",
+  TOMTOM_URL: `${MOCK}/tomtom`,
+  OLLAMA_URL: `${MOCK}/ollama`,
+  CAMERA_DATA_DIR: "tests/fixtures/cameras",
+  DEV_ALLOW_INSECURE_MEDIA: "true",
+  MAP_TILE_URL: `${MOCK}/tiles/{z}/{x}/{y}.png`,
+  MAP_ATTRIBUTION: "Test tiles · © OpenStreetMap contributors",
+  RATE_LIMIT_PER_MINUTE: "1000",
+};
+
+/** Default "no keys" configuration: only the keyless providers. */
+const minimalEnv = {
+  NEXT_TELEMETRY_DISABLED: "1",
+  NOMINATIM_URL: `${MOCK}/nominatim`,
+  OPEN_METEO_URL: `${MOCK}/open-meteo`,
+  CAMERA_DATA_DIR: "tests/fixtures/empty-cameras",
+  MAP_TILE_URL: `${MOCK}/tiles/{z}/{x}/{y}.png`,
+  MAP_ATTRIBUTION: "Test tiles · © OpenStreetMap contributors",
+  RATE_LIMIT_PER_MINUTE: "1000",
+};
+
+const chromiumPath = process.env.PLAYWRIGHT_CHROMIUM_PATH;
+
+export default defineConfig({
+  testDir: "tests/e2e",
+  fullyParallel: false,
+  forbidOnly: Boolean(process.env.CI),
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  use: {
+    trace: "retain-on-failure",
+    ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
+  },
+  projects: [
+    {
+      name: "full",
+      testMatch: /full\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:3100" },
+    },
+    {
+      name: "minimal",
+      testMatch: /minimal\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:3101" },
+    },
+  ],
+  webServer: [
+    {
+      command: "node tests/e2e/mock-upstream.mjs",
+      url: `${MOCK}/health`,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npx next start -p 3100 -H 127.0.0.1",
+      url: "http://127.0.0.1:3100/api/health",
+      env: fullEnv,
+      reuseExistingServer: !process.env.CI,
+    },
+    {
+      command: "npx next start -p 3101 -H 127.0.0.1",
+      url: "http://127.0.0.1:3101/api/health",
+      env: minimalEnv,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
+});

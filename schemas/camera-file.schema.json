@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "cameras": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^[a-z]{2}-[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "country": {
+            "type": "string",
+            "pattern": "^[a-z]{2}$"
+          },
+          "city": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "lat": {
+                "type": "number",
+                "minimum": -90,
+                "maximum": 90
+              },
+              "lon": {
+                "type": "number",
+                "minimum": -180,
+                "maximum": 180
+              }
+            },
+            "required": [
+              "lat",
+              "lon"
+            ]
+          },
+          "cameraType": {
+            "type": "string",
+            "enum": [
+              "traffic",
+              "scenic",
+              "public"
+            ]
+          },
+          "mediaType": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "link"
+            ]
+          },
+          "sourceUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "An https:// URL with a domain name (no IP addresses)"
+          },
+          "mediaUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "An https:// URL with a domain name (no IP addresses)"
+          },
+          "operator": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 120
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "license": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 200
+              },
+              "termsUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "attribution": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "name",
+              "termsUrl"
+            ]
+          },
+          "permissions": {
+            "type": "object",
+            "properties": {
+              "embedAllowed": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "const": "unknown"
+                  }
+                ]
+              },
+              "aiAnalysisAllowed": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "const": "unknown"
+                  }
+                ]
+              },
+              "commercialUseAllowed": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "string",
+                    "const": "unknown"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "embedAllowed",
+              "aiAnalysisAllowed",
+              "commercialUseAllowed"
+            ]
+          },
+          "refreshSeconds": {
+            "type": "integer",
+            "minimum": 10,
+            "maximum": 86400
+          },
+          "verification": {
+            "type": "object",
+            "properties": {
+              "lastVerified": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+              },
+              "verifiedBy": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "lastVerified",
+              "verifiedBy"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "country",
+          "city",
+          "location",
+          "cameraType",
+          "mediaType",
+          "sourceUrl",
+          "operator",
+          "license",
+          "permissions",
+          "refreshSeconds",
+          "verification"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "cameras"
+  ],
+  "additionalProperties": false,
+  "title": "AI Street Situation camera file"
+}

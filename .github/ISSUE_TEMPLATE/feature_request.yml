@@ -1,0 +1,15 @@
+name: Feature or provider request
+description: Suggest a feature or a new data provider
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like and why?
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Data source (for providers)
+      description: Operator, API docs, terms of use, pricing and rate limits.

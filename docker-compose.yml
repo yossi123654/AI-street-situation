@@ -1,0 +1,28 @@
+# One-command self-hosting:
+#   docker compose up --build                     # app only, free keyless providers
+#   docker compose --profile ollama up --build    # app + local AI (set OLLAMA_URL in .env)
+#
+# Configuration comes from .env (optional; see .env.example).
+services:
+  app:
+    build: .
+    image: ai-street-situation:local
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped
+
+  # Optional local AI. After starting, pull a vision model once:
+  #   docker compose exec ollama ollama pull qwen2.5vl:7b
+  # and set OLLAMA_URL=http://ollama:11434 in .env.
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    volumes:
+      - ollama:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama:

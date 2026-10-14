@@ -1,0 +1,25 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Steps to reproduce, what you expected and what you saw.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+  - type: dropdown
+    id: setup
+    attributes:
+      label: How do you run it?
+      options: [npm run dev, npm start, Docker, Other]
+  - type: textarea
+    id: providers
+    attributes:
+      label: Enabled providers
+      description: Copy the "Data providers on this server" panel. Never paste API keys.

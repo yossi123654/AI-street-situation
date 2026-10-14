@@ -1,0 +1,4 @@
+{
+  "$schema": "../../../schemas/camera-file.schema.json",
+  "cameras": []
+}

@@ -1,0 +1,36 @@
+name: Suggest a camera source
+description: Propose a public camera or camera feed for the registry
+labels: [cameras]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read docs/adding-a-camera.md first. We need the operator and the terms of use.
+  - type: input
+    id: operator
+    attributes:
+      label: Operator
+      description: Who runs the camera(s)? Include a link.
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Camera page or feed URL
+    validations:
+      required: true
+  - type: input
+    id: terms
+    attributes:
+      label: Terms of use / licence URL
+      description: Leave empty if you could not find any. The camera can still be added as an external link.
+  - type: dropdown
+    id: embed
+    attributes:
+      label: Do the terms allow embedding?
+      options: ["Yes", "No", "Unknown"]
+  - type: dropdown
+    id: ai
+    attributes:
+      label: Do the terms allow automated / AI analysis?
+      options: ["Yes", "No", "Unknown"]
