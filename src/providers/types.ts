@@ -44,8 +44,9 @@ export interface CameraProvider {
   /** All cameras known to this provider. Implementations may cache internally. */
   list(): Promise<Camera[]>;
   /**
-   * Hostnames this provider's media URLs may point to. The image proxy only
-   * fetches from these (in addition to the exact URL in the registry).
+   * Where this provider's media may be served from: hostnames, or
+   * "host/path/prefix" entries for shared hosts such as S3. The image proxy
+   * refuses anything else.
    */
   allowedMediaHosts?(): string[];
 }

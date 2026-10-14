@@ -81,7 +81,20 @@ const schema = z.object({
   DEV_ALLOW_INSECURE_MEDIA: bool(false),
 
   PARKING_ENABLED: bool(true),
-  OVERPASS_URL: url("https://overpass-api.de/api/interpreter"),
+  /** Overpass endpoints, tried in order (public instances are often overloaded). */
+  OVERPASS_URLS: z
+    .string()
+    .trim()
+    .default(
+      "https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass.private.coffee/api/interpreter,https://overpass-api.de/api/interpreter",
+    )
+    .transform((v) =>
+      v
+        .split(",")
+        .map((u) => u.trim().replace(/\/+$/, ""))
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url({ protocol: /^https?$/ })).min(1)),
   PARKING_SEARCH_RADIUS_M: int(800, 100, 3000),
 
   AI_PROVIDER: z.enum(["ollama", "anthropic", ""]).default(""),

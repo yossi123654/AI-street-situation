@@ -1,4 +1,35 @@
 {
   "$schema": "../../../schemas/camera-file.schema.json",
-  "cameras": []
+  "cameras": [
+    {
+      "id": "il-jerusalem-western-wall-plaza",
+      "name": "הכותל המערבי – שידור חי (Western Wall live)",
+      "description": "Live stream of the Western Wall plaza, published by the Western Wall Heritage Foundation on its official site.",
+      "country": "il",
+      "city": "jerusalem",
+      "location": { "lat": 31.7767, "lon": 35.2345 },
+      "cameraType": "public",
+      "mediaType": "link",
+      "sourceUrl": "https://thekotel.org/he/kotel/kotel_cameras/",
+      "operator": {
+        "name": "הקרן למורשת הכותל המערבי (Western Wall Heritage Foundation)",
+        "url": "https://thekotel.org/he/"
+      },
+      "license": {
+        "name": "No published terms of use for reuse",
+        "termsUrl": "https://thekotel.org/he/kotel/kotel_cameras/"
+      },
+      "permissions": {
+        "embedAllowed": "unknown",
+        "aiAnalysisAllowed": "unknown",
+        "commercialUseAllowed": "unknown"
+      },
+      "refreshSeconds": 60,
+      "verification": {
+        "lastVerified": "2026-10-14",
+        "verifiedBy": "ai-street-situation maintainers"
+      },
+      "notes": "The operator's page embeds a live video player and a YouTube playlist. No reuse terms were found on thekotel.org, so the camera is listed as an external link only. English page: https://thekotel.org/en/western-wall/western-wall-cameras/"
+    }
+  ]
 }

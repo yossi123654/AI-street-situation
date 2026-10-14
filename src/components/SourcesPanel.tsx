@@ -55,6 +55,7 @@ export function SourcesPanel({
 }) {
   const { t, formatRelative } = useI18n();
   const sources = collectSources(report, parking, summary);
+  const geocoder = providers.find((p) => p.kind === "geocoding" && p.active);
   return (
     <Card id="sources" title={t("sources.title")} icon={<InfoIcon />}>
       {sources.length > 0 ? (
@@ -84,6 +85,21 @@ export function SourcesPanel({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {geocoder ? (
+        <p className="mb-3 text-sm" data-testid="geocoder-credit">
+          <span className="text-slate-500">{t("sources.geocoding")}: </span>
+          <a
+            href={geocoder.homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline-offset-2 hover:underline"
+          >
+            {geocoder.name}
+          </a>{" "}
+          <span className="text-slate-600 dark:text-slate-400">{geocoder.attribution}</span>
+        </p>
       ) : null}
 
       <details className="group text-sm">
@@ -122,7 +138,17 @@ export function SourcesPanel({
           ))}
         </ul>
       </details>
-      <p className="mt-3 text-xs text-slate-500">{t("sources.privacy")}</p>
+      <p className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
+        <span>{t("sources.privacy")}</span>
+        <a
+          href="https://www.openstreetmap.org/fixthemap"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-brand-700"
+        >
+          {t("sources.reportMapIssue")}
+        </a>
+      </p>
     </Card>
   );
 }

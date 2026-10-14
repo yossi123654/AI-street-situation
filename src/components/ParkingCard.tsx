@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { NavigateIcon, ParkingIcon } from "@/components/icons";
-import { Card, CardSkeleton, Notice, SectionUnavailable, cx } from "@/components/ui";
+import { Card, CardSkeleton, Notice, SectionUnavailable, Spinner, cx } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { ParkingFacility, Section } from "@/lib/types";
 
@@ -52,7 +52,12 @@ export function ParkingCard({
   return (
     <Card id="parking" title={t("parking.title")} icon={<ParkingIcon />}>
       {loading && !section ? (
-        <CardSkeleton />
+        <div className="space-y-3">
+          <p className="flex items-center gap-2 text-sm text-slate-500">
+            <Spinner /> {t("parking.loading")}
+          </p>
+          <CardSkeleton />
+        </div>
       ) : !section ? null : section.status === "unavailable" ? (
         <SectionUnavailable section={section} />
       ) : all.length === 0 ? (

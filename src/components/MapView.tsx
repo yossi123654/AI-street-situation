@@ -44,16 +44,48 @@ const MAPLIBRE_WORKER_PATH = "/vendor/maplibre-gl/maplibre-gl-worker.mjs";
  * MapLibre is loaded on demand; if WebGL or the style is unavailable we fall
  * back to the raster tiles.
  */
+/** Map label expression for a UI language: the localized name, falling back to the local one. */
+export function labelExpression(locale: string): unknown[] {
+  return locale === "en"
+    ? ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]]
+    : ["coalesce", ["get", `name:${locale}`], ["get", "name"]];
+}
+
+type GlMap = ReturnType<L.MaplibreGL["getMaplibreMap"]>;
+
+/** Shows place and street names in the UI language instead of the style's Latin + local labels. */
+function localizeLabels(glMap: GlMap, locale: string) {
+  const expression = labelExpression(locale);
+  for (const layer of glMap.getStyle()?.layers ?? []) {
+    if (layer.type !== "symbol") continue;
+    const field = glMap.getLayoutProperty(layer.id, "text-field");
+    // Leave road-number shields ("ref") and other non-name labels alone.
+    if (field && JSON.stringify(field).includes('"name')) {
+      glMap.setLayoutProperty(layer.id, "text-field", expression as never);
+    }
+  }
+}
+
 function VectorBaseLayer({
   styleUrl,
   attribution,
+  locale,
   onFail,
 }: {
   styleUrl: string;
   attribution: string;
+  locale: string;
   onFail: () => void;
 }) {
   const map = useMap();
+  const [glMap, setGlMap] = useState<GlMap | null>(null);
+
+  useEffect(() => {
+    if (!glMap) return;
+    if (glMap.isStyleLoaded()) localizeLabels(glMap, locale);
+    else glMap.once("load", () => localizeLabels(glMap, locale));
+  }, [glMap, locale]);
+
   useEffect(() => {
     let layer: L.Layer | undefined;
     let cancelled = false;
@@ -73,16 +105,21 @@ function VectorBaseLayer({
         });
         glLayer.addTo(map);
         layer = glLayer;
-        const glMap = glLayer.getMaplibreMap();
+        const instance = glLayer.getMaplibreMap();
         let loaded = false;
-        glMap.once("load", () => {
+        instance.once("load", () => {
           loaded = true;
         });
-        glMap.on("error", (event: { error?: { status?: number; message?: string } }) => {
-          // A broken style (not a single missing tile) means the map cannot render.
-          if (!loaded && !cancelled) onFail();
-          console.warn("[map] vector map error:", event.error?.message ?? event);
-        });
+        instance.on(
+          "error",
+          (event: { error?: { message?: string }; sourceId?: string; tile?: unknown }) => {
+            // Fall back only when the style itself cannot load, not for a single failed tile.
+            const tileError = event.sourceId !== undefined || event.tile !== undefined;
+            if (!loaded && !tileError && !cancelled) onFail();
+            console.warn("[map] vector map error:", event.error?.message ?? event);
+          },
+        );
+        setGlMap(instance);
       } catch (error) {
         console.warn("[map] vector map unavailable, using raster tiles:", error);
         if (!cancelled) onFail();
@@ -90,6 +127,7 @@ function VectorBaseLayer({
     })();
     return () => {
       cancelled = true;
+      setGlMap(null);
       if (layer) map.removeLayer(layer);
     };
   }, [map, styleUrl, attribution, onFail]);
@@ -140,7 +178,7 @@ export function MapView({
   onSelectCamera: (id: string) => void;
   onSelectParking: (id: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [vectorFailed, setVectorFailed] = useState(false);
   const onVectorFail = useMemo(() => () => setVectorFailed(true), []);
   const icons = useMemo(
@@ -170,6 +208,7 @@ export function MapView({
           <VectorBaseLayer
             styleUrl={config.vector.styleUrl}
             attribution={config.vector.attribution}
+            locale={locale}
             onFail={onVectorFail}
           />
         ) : (

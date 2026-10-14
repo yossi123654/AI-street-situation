@@ -14,10 +14,24 @@ interface OverpassElement {
   tags?: Record<string, string>;
 }
 
-const PUBLIC_HOSTS = new Set(["overpass-api.de", "overpass.kumi.systems", "maps.mail.ru"]);
+const PUBLIC_HOSTS = new Set([
+  "overpass-api.de",
+  "maps.mail.ru",
+  "overpass.private.coffee",
+  "overpass.kumi.systems",
+]);
 
-// The public Overpass instance is shared and often overloaded: one request at a time.
+// Public instances are shared and often overloaded: one request at a time from this server.
 const publicThrottle = createThrottle(1000);
+
+/** After an error, leave an instance alone for 30 s (as the Overpass usage policy asks). */
+const COOLDOWN_MS = 30_000;
+const cooldownUntil = new Map<string, number>();
+
+/** Test helper. */
+export function resetOverpassCooldowns(): void {
+  cooldownUntil.clear();
+}
 
 const KIND: Record<string, ParkingKind> = {
   surface: "surface",
@@ -84,23 +98,50 @@ export const overpassParking: ProviderDefinition<"parking"> = {
   requiredEnv: [],
   isEnabled: (config) => config.PARKING_ENABLED,
   create(config) {
-    const isPublic = PUBLIC_HOSTS.has(new URL(config.OVERPASS_URL).hostname);
+    const endpoints = config.OVERPASS_URLS;
+    const timeoutMs = Math.max(config.UPSTREAM_TIMEOUT_MS, 20_000);
+
+    type OverpassResponse = {
+      elements?: OverpassElement[];
+      osm3s?: { timestamp_osm_base?: string };
+    };
+
+    /** Tries each endpoint in order, skipping ones that recently failed. */
+    const query = async (body: string): Promise<OverpassResponse> => {
+      const now = Date.now();
+      const available = endpoints.filter((url) => (cooldownUntil.get(url) ?? 0) <= now);
+      // If every instance is cooling down, still try the first one rather than failing outright.
+      const candidates = available.length > 0 ? available : endpoints.slice(0, 1);
+      let lastError: unknown;
+      for (const url of candidates) {
+        const request = () =>
+          upstreamJson<OverpassResponse>(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body,
+            providerId: overpassParking.id,
+            timeoutMs,
+          });
+        try {
+          return await (PUBLIC_HOSTS.has(new URL(url).hostname)
+            ? publicThrottle(request)
+            : request());
+        } catch (error) {
+          lastError = error;
+          cooldownUntil.set(url, Date.now() + COOLDOWN_MS);
+          console.warn(
+            `[parking] ${new URL(url).hostname} failed, trying the next Overpass instance`,
+          );
+        }
+      }
+      throw lastError;
+    };
+
     return {
       async parking(point, radiusM) {
         const r = Math.round(Math.min(radiusM, 3000));
-        const query = `[out:json][timeout:20];nwr["amenity"="parking"](around:${r},${point.lat.toFixed(6)},${point.lon.toFixed(6)});out center tags qt 200;`;
-        const request = () =>
-          upstreamJson<{ elements?: OverpassElement[]; osm3s?: { timestamp_osm_base?: string } }>(
-            config.OVERPASS_URL,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: new URLSearchParams({ data: query }).toString(),
-              providerId: overpassParking.id,
-              timeoutMs: Math.max(config.UPSTREAM_TIMEOUT_MS, 25_000),
-            },
-          );
-        const data = await (isPublic ? publicThrottle(request) : request());
+        const ql = `[out:json][timeout:20];nwr["amenity"="parking"](around:${r},${point.lat.toFixed(6)},${point.lon.toFixed(6)});out center tags qt 200;`;
+        const data = await query(new URLSearchParams({ data: ql }).toString());
         const observedAt = data.osm3s?.timestamp_osm_base;
         const source = sourceFrom(overpassParking, observedAt);
         return (data.elements ?? [])

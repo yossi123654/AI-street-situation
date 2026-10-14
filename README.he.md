@@ -9,11 +9,15 @@
 
 [English](README.md) · [מקורות מידע](docs/sources.md) · [הוספת מצלמה](docs/adding-a-camera.md) · [הוספת ספק](docs/adding-a-provider.md) · [תרומה לפרויקט](CONTRIBUTING.md)
 
-![תמונת מצב לרחוב יפו בירושלים](docs/screenshots/02-report-he.png)
+**עם נתונים אמיתיים ובלי אף מפתח API** (מפת OpenFreeMap, ‏Nominatim, ‏Open-Meteo, חניונים מ-OpenStreetMap):
+
+![ירושלים, נתונים אמיתיים](docs/screenshots/real-jerusalem-he.png)
+
+**כל היכולות, כולל סיכום AI, תנועה, אירועים ומצלמות** (נתוני בדיקה משרת דמה, לא נתונים אמיתיים):
+
+![תמונת מצב מלאה עם סיכום AI](docs/screenshots/02-report-he.png)
 
 ![חיפוש חניה](docs/screenshots/08-parking.png)
-
-> צילומי המסך נוצרים מול שרת דמה עם נתונים מומצאים ותמונת מצלמה סינתטית, כי סביבת הבנייה אינה מגיעה לשירותים האמיתיים.
 
 ## יכולות
 

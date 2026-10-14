@@ -13,7 +13,10 @@ export interface LatLon {
 /** A geocoded place. */
 export interface Place extends LatLon {
   id: string;
+  /** Short, readable label, e.g. "Jaffa Street, City Centre, Jerusalem". */
   label: string;
+  /** The geocoder's full description, when it differs from the label. */
+  fullLabel?: string;
   /** Free-form place kind reported by the geocoder (street, city, ...). */
   kind?: string;
   /** [south, west, north, east] */
@@ -222,6 +225,7 @@ export interface ProviderStatus {
   active: boolean;
   requiredEnv: string[];
   homepage: string;
+  attribution: string;
 }
 
 export type ProviderKind =

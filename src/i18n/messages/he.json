@@ -205,7 +205,9 @@
     "enabled": "פעיל",
     "disabled": "לא מוגדר",
     "requires": "נדרש: {env}",
-    "privacy": "בלי חשבונות, בלי מעקב, בלי analytics. תמונות מצלמה אינן נשמרות."
+    "privacy": "בלי חשבונות, בלי מעקב, בלי analytics. תמונות מצלמה אינן נשמרות.",
+    "geocoding": "חיפוש כתובות",
+    "reportMapIssue": "דיווח על בעיה במפה"
   },
   "time": {
     "justNow": "עכשיו"

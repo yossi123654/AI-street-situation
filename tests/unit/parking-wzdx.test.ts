@@ -82,7 +82,7 @@ describe("elementToParking", () => {
 
 describe("overpass provider", () => {
   it("posts an around query and filters by radius", async () => {
-    restore = withEnv({ OVERPASS_URL: "https://overpass.example.org/api/interpreter" });
+    restore = withEnv({ OVERPASS_URLS: "https://overpass.example.org/api/interpreter" });
     mockFetch(async (url, init) => {
       expect(url.href).toBe("https://overpass.example.org/api/interpreter");
       expect(init?.method).toBe("POST");
@@ -115,7 +115,7 @@ describe("ParkingService", () => {
   });
 
   it("sorts by distance, caches, and reports errors as a section", async () => {
-    restore = withEnv({ OVERPASS_URL: "https://overpass.example.org/api/interpreter" });
+    restore = withEnv({ OVERPASS_URLS: "https://overpass.example.org/api/interpreter" });
     const fetch = mockFetch(() =>
       jsonResponse({
         elements: [

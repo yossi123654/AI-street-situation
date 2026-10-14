@@ -54,6 +54,7 @@ test.describe("with all providers configured", () => {
     await expect(page.getByTestId("sources")).toContainText("Open-Meteo");
     await expect(page.getByTestId("sources")).toContainText("TomTom");
     await expect(page.getByTestId("sources")).toContainText("Example Road Authority (WZDx)");
+    await expect(page.getByTestId("geocoder-credit")).toContainText("© OpenStreetMap contributors");
     await expect(page.locator(".leaflet-control-attribution")).toContainText("OpenStreetMap");
     await snap(page, "02-report-he");
     await snap(page, "03-report-he-full", { tall: 2600 });

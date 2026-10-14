@@ -205,7 +205,9 @@
     "enabled": "Enabled",
     "disabled": "Not configured",
     "requires": "Requires: {env}",
-    "privacy": "No accounts, no tracking, no analytics. Camera images are never stored."
+    "privacy": "No accounts, no tracking, no analytics. Camera images are never stored.",
+    "geocoding": "Address search",
+    "reportMapIssue": "Report a map issue"
   },
   "time": {
     "justNow": "just now"

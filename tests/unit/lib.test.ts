@@ -174,4 +174,65 @@ describe("assertSafeMediaUrl", () => {
       /allowlisted/,
     );
   });
+
+  it("supports host + path prefix entries for shared hosts like S3", () => {
+    const options = {
+      allowInsecure: false,
+      allowedHosts: ["s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/"],
+    };
+    const s3 = "https://s3-eu-west-1.amazonaws.com";
+    expect(() =>
+      assertSafeMediaUrl(`${s3}/jamcams.tfl.gov.uk/00002.00865.jpg`, options),
+    ).not.toThrow();
+    for (const bad of [
+      `${s3}/other-bucket/x.jpg`,
+      `${s3}/jamcams.tfl.gov.uk/../other-bucket/x.jpg`,
+      `${s3}/jamcams.tfl.gov.uk/%2e%2e/other-bucket/x.jpg`,
+      "https://jamcams.tfl.gov.uk.evil.example/x.jpg",
+    ]) {
+      expect(() => assertSafeMediaUrl(bad, options), bad).toThrow(/allowlisted/);
+    }
+  });
+});
+
+describe("upstreamFetch", () => {
+  it("retries GET requests once after a network error, but not HTTP errors or POSTs", async () => {
+    const { upstreamFetch } = await import("@/lib/http");
+    let calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls++;
+        if (calls === 1) throw new TypeError("fetch failed");
+        return new Response("ok");
+      }),
+    );
+    await expect(upstreamFetch("https://a.example.org/x")).resolves.toBeInstanceOf(Response);
+    expect(calls).toBe(2);
+
+    calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls++;
+        return new Response("nope", { status: 503 });
+      }),
+    );
+    await expect(upstreamFetch("https://a.example.org/x")).rejects.toThrow(/HTTP 503/);
+    expect(calls).toBe(1);
+
+    calls = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        calls++;
+        throw new TypeError("fetch failed");
+      }),
+    );
+    await expect(upstreamFetch("https://a.example.org/x", { method: "POST" })).rejects.toThrow(
+      /network error/,
+    );
+    expect(calls).toBe(1);
+    vi.unstubAllGlobals();
+  });
 });

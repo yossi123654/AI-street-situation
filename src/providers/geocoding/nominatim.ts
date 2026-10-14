@@ -15,6 +15,25 @@ interface NominatimResult {
   type?: string;
   addresstype?: string;
   boundingbox?: [string, string, string, string];
+  name?: string;
+  address?: Record<string, string>;
+}
+
+/**
+ * Builds a short label from Nominatim's address details. display_name lists
+ * every administrative level (and repeats some), which is hard to read.
+ */
+export function shortLabel(r: Pick<NominatimResult, "name" | "address" | "display_name">): string {
+  const a = r.address ?? {};
+  const road = a.road ? [a.road, a.house_number].filter(Boolean).join(" ") : undefined;
+  const primary = r.name || road || a.pedestrian || a.square;
+  const area = a.neighbourhood ?? a.suburb ?? a.quarter;
+  const city = a.city ?? a.town ?? a.village ?? a.municipality ?? a.county;
+  const parts = [primary, primary !== road ? road : undefined, area, city, a.country];
+  const unique = parts.filter(
+    (part, index): part is string => Boolean(part) && parts.indexOf(part) === index,
+  );
+  return unique.length >= 2 ? unique.join(", ") : r.display_name;
 }
 
 const PUBLIC_HOST = "nominatim.openstreetmap.org";
@@ -34,17 +53,27 @@ export const nominatim: ProviderDefinition<"geocoding"> = {
   create(config) {
     const base = config.NOMINATIM_URL;
     const isPublic = new URL(base).hostname === PUBLIC_HOST;
+    if (isPublic) {
+      console.info(
+        "[geocoding] Using the public Nominatim instance. You are responsible for following its usage policy " +
+          "(https://operations.osmfoundation.org/policies/nominatim/): set APP_USER_AGENT to identify your deployment, " +
+          "and switch NOMINATIM_URL to your own instance or another provider if your traffic is more than moderate.",
+      );
+    }
     const run = <T>(task: () => Promise<T>) => (isPublic ? publicThrottle(task) : task());
     const common = {
       format: "jsonv2",
+      addressdetails: 1,
       email: config.NOMINATIM_EMAIL,
     };
 
     const toPlace = (r: NominatimResult): Place => {
       const bb = r.boundingbox?.map(Number);
+      const label = shortLabel(r);
       return {
         id: `nominatim:${r.osm_type ?? "x"}${r.osm_id ?? r.place_id}`,
-        label: r.display_name,
+        label,
+        ...(label !== r.display_name ? { fullLabel: r.display_name } : {}),
         lat: Number(r.lat),
         lon: Number(r.lon),
         kind: r.addresstype ?? r.type,

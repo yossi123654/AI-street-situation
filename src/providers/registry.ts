@@ -133,6 +133,7 @@ export function getProviderStatuses(): ProviderStatus[] {
       active: isActive,
       requiredEnv: def.requiredEnv,
       homepage: def.homepage,
+      attribution: def.attribution,
     };
   });
 }
