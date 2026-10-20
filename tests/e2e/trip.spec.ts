@@ -77,6 +77,7 @@ test.describe("trip planning", () => {
 
     // Attribution for the router.
     await expect(page.getByTestId("sources")).toContainText("TomTom Routing");
+    await page.evaluate(() => window.scrollTo(0, 0));
     await snap(page, "09-trip-he");
     await page.locator("#trip-weather").scrollIntoViewIfNeeded();
     await snap(page, "10-trip-he-details", { tall: 2400 });
