@@ -18,7 +18,7 @@ function createServices() {
   const situation = new SituationService(cameras);
   const parking = new ParkingService();
   const trip = new TripService(parking);
-  const summary = new SituationSummaryService(situation, cameras, vision, parking, trip);
+  const summary = new SituationSummaryService(situation, cameras, vision, parking, trip, location);
   return { location, cameras, images, availability, vision, situation, parking, trip, summary };
 }
 

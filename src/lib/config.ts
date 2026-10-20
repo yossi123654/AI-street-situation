@@ -137,6 +137,8 @@ const schema = z.object({
   MAP_DEFAULT_ZOOM: int(8, 1, 20),
 
   RATE_LIMIT_PER_MINUTE: int(60, 1, 10000),
+  /** Cap on all API requests per minute, across every client (protects upstream quotas). */
+  GLOBAL_RATE_LIMIT_PER_MINUTE: int(1200, 1, 1_000_000),
   TRUST_PROXY: bool(false),
   UPSTREAM_TIMEOUT_MS: int(10000, 500, 120000),
 });

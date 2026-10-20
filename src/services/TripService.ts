@@ -144,9 +144,16 @@ export class TripService {
       mode,
       locale,
     ].join(",");
-    return this.reportCache.getOrSet(key, 3 * MINUTE, () =>
-      this.build(from, to, locale, mode, key),
+    // The cached report is shared between users, so it never stores their labels:
+    // labels are user input (from the URL) and are attached per request.
+    const bare = await this.reportCache.getOrSet(key, 3 * MINUTE, () =>
+      this.build({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon }, locale, mode, key),
     );
+    return {
+      ...bare,
+      from: { ...bare.from, ...(from.label ? { label: from.label } : {}) },
+      to: { ...bare.to, ...(to.label ? { label: to.label } : {}) },
+    };
   }
 
   private async build(

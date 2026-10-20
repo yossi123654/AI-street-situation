@@ -15,6 +15,7 @@ import type {
 import { getProvider } from "@/providers/registry";
 import { summarySystemPrompt, tripSummarySystemPrompt } from "@/services/ai/prompts";
 import type { CameraRegistry } from "@/services/CameraRegistry";
+import type { LocationService } from "@/services/LocationService";
 import type { ParkingService } from "@/services/ParkingService";
 import type { TripService } from "@/services/TripService";
 import type { SituationService } from "@/services/SituationService";
@@ -236,7 +237,23 @@ export class SituationSummaryService {
     private readonly vision: VisionAnalyzer,
     private readonly parking?: ParkingService,
     private readonly trip?: TripService,
+    private readonly location?: LocationService,
   ) {}
+
+  /**
+   * Name of a point for the AI prompt. Summaries are cached and shared by
+   * location, so the name must not come from the request (a `label` in the URL
+   * is user input and would let one user inject text into what others see).
+   * The geocoder's reverse lookup is cached for a day.
+   */
+  private async trustedLabel(point: LatLon, locale: Locale): Promise<string | undefined> {
+    if (!this.location) return undefined;
+    try {
+      return (await this.location.reverse(point, locale))?.label;
+    } catch {
+      return undefined;
+    }
+  }
 
   async summarizeTrip(
     from: LatLon & { label?: string },
@@ -249,7 +266,15 @@ export class SituationSummaryService {
     const bucket = Math.floor(Date.now() / (5 * 60_000));
     const key = `trip:${provider.def.id}:${locale}:${roundCoord(from.lat, 3)},${roundCoord(from.lon, 3)}:${roundCoord(to.lat, 3)},${roundCoord(to.lon, 3)}:${bucket}`;
     return this.cache.getOrSet(key, 5 * 60_000, async () => {
-      const report = await this.trip!.plan(from, to, locale);
+      const [fromLabel, toLabel] = await Promise.all([
+        this.trustedLabel(from, locale),
+        this.trustedLabel(to, locale),
+      ]);
+      const report = await this.trip!.plan(
+        { lat: from.lat, lon: from.lon, ...(fromLabel ? { label: fromLabel } : {}) },
+        { lat: to.lat, lon: to.lon, ...(toLabel ? { label: toLabel } : {}) },
+        locale,
+      );
       const facts = buildTripFacts(report);
       const text = await provider.instance.complete({
         system: tripSummarySystemPrompt(locale),
@@ -264,7 +289,7 @@ export class SituationSummaryService {
     });
   }
 
-  async summarize(point: LatLon, locale: Locale, label?: string): Promise<AiSummary> {
+  async summarize(point: LatLon, locale: Locale): Promise<AiSummary> {
     const provider = getProvider("ai");
     if (!provider) throw notConfigured("no AI provider is configured");
     // Bucket by 5 minutes so repeated requests within a short window are free.
@@ -272,6 +297,7 @@ export class SituationSummaryService {
     const key = `${provider.def.id}:${locale}:${roundCoord(point.lat, 3)},${roundCoord(point.lon, 3)}:${bucket}`;
     return this.cache.getOrSet(key, 5 * 60_000, async () => {
       const radiusM = getConfig().PARKING_SEARCH_RADIUS_M;
+      const label = await this.trustedLabel(point, locale);
       const [report, parkingSection] = await Promise.all([
         this.situation.report(point, locale, label),
         this.parking?.find(point, radiusM),
