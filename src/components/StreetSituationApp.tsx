@@ -6,12 +6,15 @@ import { CamerasCard } from "@/components/CamerasCard";
 import { Header } from "@/components/Header";
 import { IncidentsCard } from "@/components/IncidentsCard";
 import { ParkingCard } from "@/components/ParkingCard";
-import { CodeIcon, PinIcon, RefreshIcon } from "@/components/icons";
+import { CodeIcon, PinIcon, RefreshIcon, RouteIcon } from "@/components/icons";
 import { SearchBar } from "@/components/SearchBar";
 import { SourcesPanel } from "@/components/SourcesPanel";
 import { SummaryCard, type SummaryState } from "@/components/SummaryCard";
 import { TrafficCard } from "@/components/TrafficCard";
-import { Notice, Skeleton, Spinner } from "@/components/ui";
+import { TripSearch, type TripEndpoint } from "@/components/TripSearch";
+import { TripDetails, TripOverviewCard } from "@/components/TripView";
+import { Notice, Skeleton, Spinner, cx } from "@/components/ui";
+import { useTripData, type TripSelection } from "@/components/useTripData";
 import { WeatherCard } from "@/components/WeatherCard";
 import { I18nProvider, useI18n } from "@/i18n/I18nProvider";
 import { ApiRequestError, apiGet } from "@/lib/apiClient";
@@ -34,6 +37,9 @@ const MapView = dynamic(() => import("@/components/MapView").then((m) => m.MapVi
 
 const NO_CAMERAS: CameraView[] = [];
 const NO_PARKING: ParkingFacility[] = [];
+const NONE: never[] = [];
+
+type Mode = "place" | "trip";
 
 export interface SelectedPlace {
   lat: number;
@@ -81,24 +87,79 @@ function writePlaceToUrl(place: SelectedPlace) {
   window.history.replaceState(null, "", `?${params.toString()}`);
 }
 
+function parseEndpointParam(params: URLSearchParams, name: string): TripEndpoint | null {
+  const match = params.get(name)?.match(/^(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/);
+  if (!match) return null;
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  const label = params.get(`${name}Label`) ?? undefined;
+  return { lat, lon, ...(label ? { label } : {}) };
+}
+
+function readTripFromUrl(): TripSelection | null {
+  const params = new URLSearchParams(window.location.search);
+  const from = parseEndpointParam(params, "from");
+  const to = parseEndpointParam(params, "to");
+  return from && to ? { from, to } : null;
+}
+
+function writeTripToUrl(trip: TripSelection) {
+  const params = new URLSearchParams();
+  params.set("from", `${trip.from.lat.toFixed(5)},${trip.from.lon.toFixed(5)}`);
+  params.set("to", `${trip.to.lat.toFixed(5)},${trip.to.lon.toFixed(5)}`);
+  if (trip.from.label) params.set("fromLabel", trip.from.label);
+  if (trip.to.label) params.set("toLabel", trip.to.label);
+  window.history.replaceState(null, "", `?${params.toString()}`);
+}
+
 function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
   const { t, locale, formatRelative } = useI18n();
+  const [mode, setMode] = useState<Mode>("place");
   const [place, setPlace] = useState<SelectedPlace | null>(null);
+  const [trip, setTrip] = useState<TripSelection | null>(null);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const resultsRef = useRef<HTMLDivElement>(null);
   const aiEnabled = providers.some((p) => p.kind === "ai" && p.enabled);
 
-  // Restore a shared link (?lat=..&lon=..&label=..).
+  // Restore a shared link: ?lat=..&lon=.. (place) or ?from=..&to=.. (trip).
   useEffect(() => {
+    const tripFromUrl = readTripFromUrl();
+    /* eslint-disable react-hooks/set-state-in-effect -- one-time sync from the URL on mount */
+    if (tripFromUrl) {
+      setTrip(tripFromUrl);
+      setMode("trip");
+      return;
+    }
     const fromUrl = readPlaceFromUrl();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from the URL on mount
     if (fromUrl) setPlace(fromUrl);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
+
+  const planTrip = useCallback((from: TripEndpoint, to: TripEndpoint) => {
+    const next = { from, to };
+    setTrip(next);
+    setSelectedStopId(null);
+    setSelectedParkingId(null);
+    writeTripToUrl(next);
+    if (window.matchMedia("(max-width: 1023px)").matches) {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    if (next === "trip" && trip) writeTripToUrl(trip);
+    else if (next === "place" && place) writePlaceToUrl(place);
+    else window.history.replaceState(null, "", window.location.pathname);
+  };
 
   const selectPlace = useCallback(
     (next: SelectedPlace, options: { reverseGeocode?: boolean } = {}) => {
+      setMode("place");
       setPlace(next);
       setSelectedCameraId(null);
       setSelectedParkingId(null);
@@ -125,8 +186,8 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
     [locale],
   );
 
-  const lat = place?.lat;
-  const lon = place?.lon;
+  const lat = mode === "place" ? place?.lat : undefined;
+  const lon = mode === "place" ? place?.lon : undefined;
   const label = place?.label;
 
   // Each request is identified by a key; loading state is derived by comparing
@@ -231,16 +292,70 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
         : undefined;
   const cameras = shown?.cameras.status === "ok" ? shown.cameras.data : NO_CAMERAS;
 
+  // Trip mode.
+  const tripData = useTripData(mode === "trip" ? trip : null, locale, aiEnabled, reloadToken);
+  const tripReport = tripData.report?.status === "ok" ? tripData.report.data : undefined;
+  const tripRoute = tripReport?.route.status === "ok" ? tripReport.route.data : null;
+  const tripStops = tripData.stops?.status === "ok" ? tripData.stops.data : NONE;
+  const tripParking =
+    tripReport?.destinationParking.status === "ok"
+      ? tripReport.destinationParking.data
+      : NO_PARKING;
+  const mapTrip =
+    mode === "trip" && trip
+      ? {
+          from: trip.from,
+          to: trip.to,
+          route: tripRoute,
+          weather: tripReport?.weatherAlong.status === "ok" ? tripReport.weatherAlong.data : NONE,
+          stops: tripStops,
+          selectedStopId,
+        }
+      : null;
+
   return (
     <div className="flex min-h-dvh flex-col">
       <Header />
 
       <div className="border-b border-slate-200 bg-white/70 dark:border-slate-800 dark:bg-slate-900/60">
-        <div className="mx-auto max-w-7xl px-4 py-5">
-          <SearchBar
-            onSelect={(p) => selectPlace({ lat: p.lat, lon: p.lon, label: p.label })}
-            onLocate={(p) => selectPlace(p, { reverseGeocode: true })}
-          />
+        <div className="mx-auto max-w-7xl space-y-3 px-4 py-4">
+          <div
+            role="tablist"
+            aria-label={t("mode.label")}
+            className="inline-flex rounded-xl bg-slate-100 p-1 text-sm dark:bg-slate-800"
+          >
+            {(["place", "trip"] as const).map((value) => (
+              <button
+                key={value}
+                role="tab"
+                type="button"
+                aria-selected={mode === value}
+                onClick={() => switchMode(value)}
+                data-testid={`mode-${value}`}
+                className={cx(
+                  "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 font-medium transition-colors",
+                  mode === value
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200",
+                )}
+              >
+                {value === "place" ? <PinIcon /> : <RouteIcon />}
+                {t(`mode.${value}`)}
+              </button>
+            ))}
+          </div>
+          {mode === "place" ? (
+            <SearchBar
+              onSelect={(p) => selectPlace({ lat: p.lat, lon: p.lon, label: p.label })}
+              onLocate={(p) => selectPlace(p, { reverseGeocode: true })}
+            />
+          ) : (
+            <TripSearch
+              key={trip ? `${trip.from.lat},${trip.to.lat}` : "empty"}
+              initial={trip ?? undefined}
+              onPlan={planTrip}
+            />
+          )}
         </div>
       </div>
 
@@ -250,17 +365,20 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
             <MapView
               config={map}
               place={place}
-              cameras={cameras}
-              parking={parkingFacilities}
+              cameras={mode === "place" ? cameras : NO_CAMERAS}
+              parking={mode === "place" ? parkingFacilities : tripParking}
+              trip={mapTrip}
               selectedCameraId={selectedCameraId}
               selectedParkingId={selectedParkingId}
               onPick={(point) => selectPlace(point, { reverseGeocode: true })}
               onSelectCamera={setSelectedCameraId}
               onSelectParking={setSelectedParkingId}
             />
-            <p className="pointer-events-none absolute inset-x-2 top-2 z-[1000] mx-auto w-fit rounded-full bg-white/90 px-3 py-1 text-xs text-slate-600 shadow dark:bg-slate-900/90 dark:text-slate-300">
-              {t("map.hint")}
-            </p>
+            {mode === "place" ? (
+              <p className="pointer-events-none absolute inset-x-2 top-2 z-[1000] mx-auto w-fit rounded-full bg-white/90 px-3 py-1 text-xs text-slate-600 shadow dark:bg-slate-900/90 dark:text-slate-300">
+                {t("map.hint")}
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -268,9 +386,75 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
           ref={resultsRef}
           className="min-w-0 scroll-mt-4 space-y-4"
           aria-live="polite"
-          aria-busy={report.status === "loading"}
+          aria-busy={report.status === "loading" || tripData.report?.status === "loading"}
         >
-          {!place ? (
+          {mode === "trip" ? (
+            !trip ? (
+              <EmptyState trip />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <RouteIcon className="text-xl text-brand-600" />
+                  <h2
+                    className="min-w-0 flex-1 text-lg leading-snug font-semibold"
+                    data-testid="trip-label"
+                  >
+                    {t("trip.title", {
+                      from:
+                        trip.from.label ??
+                        `${trip.from.lat.toFixed(4)}, ${trip.from.lon.toFixed(4)}`,
+                      to: trip.to.label ?? `${trip.to.lat.toFixed(4)}, ${trip.to.lon.toFixed(4)}`,
+                    })}
+                  </h2>
+                  {tripData.report?.status === "loading" ? (
+                    <span className="flex items-center gap-2 text-sm text-slate-500">
+                      <Spinner /> {t("trip.loading")}
+                    </span>
+                  ) : tripReport ? (
+                    <span className="flex items-center gap-2 text-xs text-slate-500">
+                      {t("report.updated", { time: formatRelative(tripReport.generatedAt) })}
+                      <button
+                        type="button"
+                        onClick={() => setReloadToken((n) => n + 1)}
+                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1 font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-500 dark:hover:bg-slate-800"
+                      >
+                        <RefreshIcon /> {t("report.refresh")}
+                      </button>
+                    </span>
+                  ) : null}
+                </div>
+                {tripData.report?.status === "error" ? (
+                  <Notice tone="error">
+                    <p>
+                      {tripData.report.code === "bad_request" ? t("trip.tooFar") : t("trip.error")}
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2 font-medium underline"
+                      onClick={() => setReloadToken((n) => n + 1)}
+                    >
+                      {t("report.retry")}
+                    </button>
+                  </Notice>
+                ) : null}
+                <TripOverviewCard
+                  report={tripReport}
+                  summary={tripData.summary}
+                  parkingRadiusM={parkingRadiusM}
+                />
+                <TripDetails
+                  report={tripReport}
+                  stops={tripData.stops}
+                  stopsLoading={tripData.stopsLoading}
+                  selectedStopId={selectedStopId}
+                  onSelectStop={setSelectedStopId}
+                  parkingRadiusM={parkingRadiusM}
+                  selectedParkingId={selectedParkingId}
+                  onSelectParking={setSelectedParkingId}
+                />
+              </>
+            )
+          ) : !place ? (
             <EmptyState />
           ) : (
             <>
@@ -342,10 +526,28 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
             </>
           )}
           <SourcesPanel
-            report={shown}
-            parking={parking}
+            sections={
+              mode === "trip"
+                ? [
+                    tripReport?.route,
+                    tripReport?.weatherAlong,
+                    tripReport?.trafficAlong,
+                    tripReport?.incidents,
+                    tripData.stops,
+                    tripReport?.destinationParking,
+                  ]
+                : [shown?.weather, shown?.traffic, shown?.incidents, shown?.cameras, parking]
+            }
             providers={providers}
-            summary={summary.status === "ok" ? summary.data : undefined}
+            summary={
+              mode === "trip"
+                ? tripData.summary.status === "ok"
+                  ? tripData.summary.data
+                  : undefined
+                : summary.status === "ok"
+                  ? summary.data
+                  : undefined
+            }
           />
         </div>
       </main>
@@ -364,14 +566,20 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ trip = false }: { trip?: boolean }) {
   const { t } = useI18n();
   return (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
-      <PinIcon className="mx-auto mb-3 text-4xl text-brand-500" />
-      <h2 className="mb-2 text-lg font-semibold">{t("empty.title")}</h2>
+      {trip ? (
+        <RouteIcon className="mx-auto mb-3 text-4xl text-brand-500" />
+      ) : (
+        <PinIcon className="mx-auto mb-3 text-4xl text-brand-500" />
+      )}
+      <h2 className="mb-2 text-lg font-semibold">
+        {trip ? t("empty.tripTitle") : t("empty.title")}
+      </h2>
       <p className="mx-auto max-w-prose text-sm text-slate-600 dark:text-slate-400">
-        {t("empty.body")}
+        {trip ? t("empty.tripBody") : t("empty.body")}
       </p>
     </div>
   );

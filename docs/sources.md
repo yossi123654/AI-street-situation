@@ -225,6 +225,54 @@ default and the UI says so.
 - The `ParkingFacility.occupancy` field and the provider interface are ready
   for a live source. If you know one with published terms, please open an issue.
 
+## Routing (trips)
+
+### OSRM on routing.openstreetmap.de (default)
+
+- URL: `https://routing.openstreetmap.de/routed-car` (`OSRM_URL`). Software:
+  OSRM (<https://project-osrm.org>, BSD-2-Clause), self-hostable.
+- Operator: FOSSGIS e.V., the same server that powers directions on
+  openstreetmap.org. Data © OpenStreetMap contributors (ODbL), updated about
+  every two days.
+- Terms (<https://routing.openstreetmap.de/about.html>, read 2026-10-20):
+  show attribution and a "fix the map" link, send a valid User-Agent,
+  **at most one request per second**, no scraping or heavy usage.
+  Implemented: attribution and the fix-the-map link appear in the trip
+  overview, requests are throttled to one per second per server, routes are
+  cached for 30 minutes.
+- Travel times are free-flow estimates. OSRM has no live traffic, and the UI
+  says so next to every OSRM travel time.
+- Verified live: Jerusalem → Tel Aviv, 66 km, 59 min, with Hebrew road names.
+
+### TomTom Routing API (`TOMTOM_API_KEY`)
+
+- Docs: <https://developer.tomtom.com/routing-api/documentation/tomtom-maps/calculate-route>
+- Endpoint used: `routing/1/calculateRoute/{lat,lon:lat,lon}/json` with
+  `traffic=true`, `sectionType=traffic`, `computeTravelTimeFor=all` and text
+  instructions. The response gives travel time with current traffic, the
+  delay, and the slow sections (jam, road works, closure) with their
+  effective speed, which the app draws on the route.
+- Preferred automatically when the key is set (`ROUTING_PROVIDER` overrides).
+  Commercial terms with a free tier; attribution "© TomTom" is shown.
+
+### Stops along a route: OpenStreetMap via Overpass (default)
+
+- Same endpoints and policy as parking (`OVERPASS_URLS`). One corridor query
+  per trip (`around:400` metres of a thinned polyline) for `amenity=fuel`,
+  `amenity=charging_station`, `highway=rest_area` and `highway=services`,
+  cached for 24 hours. Private stops are hidden. Facilities (toilets, shop,
+  café, restaurant, car wash, air, EV charging) come from the OSM tags.
+- Because public Overpass instances are slow, stops load after the rest of
+  the trip and never delay it.
+
+### Weather along a route
+
+- Open-Meteo, one request per trip with all sampled points (up to 12, one
+  every 10 km) and the hourly forecast. Each point shows the conditions for
+  the time the driver is expected there: current conditions within 30
+  minutes of departure, the nearest hourly forecast slot after that. Same
+  terms and attribution as above.
+
 ## Cameras
 
 ### Community registry (default)

@@ -6,6 +6,9 @@ import type {
   Locale,
   ParkingFacility,
   Place,
+  Route,
+  TravelMode,
+  TripStop,
   ProviderKind,
   TrafficFlow,
   WeatherData,
@@ -24,6 +27,32 @@ export interface GeocodingProvider {
 
 export interface WeatherProvider {
   current(point: LatLon): Promise<WeatherData>;
+  /**
+   * Weather at several points, each for a given time (now or a few hours
+   * ahead). Optional: providers without forecasts can omit it.
+   */
+  forecastAt?(points: Array<LatLon & { at: Date }>): Promise<PointForecast[]>;
+}
+
+export interface PointForecast {
+  temperatureC: number | null;
+  weatherCode: number | null;
+  precipitationMm: number | null;
+  windSpeedKmh: number | null;
+  visibilityM: number | null;
+  isDay: boolean | null;
+  /** The time the values are valid for (ISO). */
+  validAt: string;
+  kind: "current" | "forecast";
+}
+
+export interface StopsProvider {
+  /** Fuel stations, rest areas and similar within `radiusM` of the polyline ([lat, lon] pairs). */
+  stopsAlong(line: Array<[number, number]>, radiusM: number): Promise<TripStop[]>;
+}
+
+export interface RoutingProvider {
+  route(from: LatLon, to: LatLon, mode: TravelMode, locale: Locale): Promise<Route>;
 }
 
 export interface TrafficProvider {
@@ -74,6 +103,8 @@ export interface ProviderKindMap {
   incidents: IncidentsProvider;
   cameras: CameraProvider;
   parking: ParkingProvider;
+  routing: RoutingProvider;
+  stops: StopsProvider;
   ai: AiProvider;
 }
 

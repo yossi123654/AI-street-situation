@@ -9,6 +9,7 @@ const fullEnv = {
   OPEN_METEO_URL: `${MOCK}/open-meteo`,
   TOMTOM_API_KEY: "test-key",
   TOMTOM_URL: `${MOCK}/tomtom`,
+  OSRM_URL: `${MOCK}/osrm/routed-car`,
   WZDX_FEED_URLS: `${MOCK}/wzdx/feed.json`,
   OVERPASS_URLS: `${MOCK}/overpass/api/interpreter`,
   OLLAMA_URL: `${MOCK}/ollama`,
@@ -27,6 +28,7 @@ const minimalEnv = {
   NEXT_TELEMETRY_DISABLED: "1",
   NOMINATIM_URL: `${MOCK}/nominatim`,
   OPEN_METEO_URL: `${MOCK}/open-meteo`,
+  OSRM_URL: `${MOCK}/osrm/routed-car`,
   CAMERA_DATA_DIR: "tests/fixtures/empty-cameras",
   OVERPASS_URLS: `${MOCK}/overpass/api/interpreter`,
   MAP_TYPE: "raster",
@@ -50,13 +52,15 @@ export default defineConfig({
   projects: [
     {
       name: "full",
-      testMatch: /full\.spec\.ts/,
+      testMatch: /(full|trip)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:3100" },
+      metadata: { server: "full" },
     },
     {
       name: "minimal",
-      testMatch: /minimal\.spec\.ts/,
+      testMatch: /(minimal|trip)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:3101" },
+      metadata: { server: "minimal" },
     },
   ],
   webServer: [

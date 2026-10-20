@@ -1,37 +1,10 @@
 import { haversineMeters } from "@/lib/geo";
-import { upstreamJson } from "@/lib/http";
-import { createThrottle } from "@/lib/throttle";
 import type { ParkingFacility, ParkingKind } from "@/lib/types";
 import { sourceFrom } from "@/providers/source";
 import type { ProviderDefinition } from "@/providers/types";
 
-interface OverpassElement {
-  type: "node" | "way" | "relation";
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string>;
-}
-
-const PUBLIC_HOSTS = new Set([
-  "overpass-api.de",
-  "maps.mail.ru",
-  "overpass.private.coffee",
-  "overpass.kumi.systems",
-]);
-
-// Public instances are shared and often overloaded: one request at a time from this server.
-const publicThrottle = createThrottle(1000);
-
-/** After an error, leave an instance alone for 30 s (as the Overpass usage policy asks). */
-const COOLDOWN_MS = 30_000;
-const cooldownUntil = new Map<string, number>();
-
-/** Test helper. */
-export function resetOverpassCooldowns(): void {
-  cooldownUntil.clear();
-}
+import { createOverpassClient, type OverpassElement } from "@/providers/overpass/client";
+export { resetOverpassCooldowns } from "@/providers/overpass/client";
 
 const KIND: Record<string, ParkingKind> = {
   surface: "surface",
@@ -98,50 +71,12 @@ export const overpassParking: ProviderDefinition<"parking"> = {
   requiredEnv: [],
   isEnabled: (config) => config.PARKING_ENABLED,
   create(config) {
-    const endpoints = config.OVERPASS_URLS;
-    const timeoutMs = Math.max(config.UPSTREAM_TIMEOUT_MS, 20_000);
-
-    type OverpassResponse = {
-      elements?: OverpassElement[];
-      osm3s?: { timestamp_osm_base?: string };
-    };
-
-    /** Tries each endpoint in order, skipping ones that recently failed. */
-    const query = async (body: string): Promise<OverpassResponse> => {
-      const now = Date.now();
-      const available = endpoints.filter((url) => (cooldownUntil.get(url) ?? 0) <= now);
-      // If every instance is cooling down, still try the first one rather than failing outright.
-      const candidates = available.length > 0 ? available : endpoints.slice(0, 1);
-      let lastError: unknown;
-      for (const url of candidates) {
-        const request = () =>
-          upstreamJson<OverpassResponse>(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body,
-            providerId: overpassParking.id,
-            timeoutMs,
-          });
-        try {
-          return await (PUBLIC_HOSTS.has(new URL(url).hostname)
-            ? publicThrottle(request)
-            : request());
-        } catch (error) {
-          lastError = error;
-          cooldownUntil.set(url, Date.now() + COOLDOWN_MS);
-          console.warn(
-            `[parking] ${new URL(url).hostname} failed, trying the next Overpass instance`,
-          );
-        }
-      }
-      throw lastError;
-    };
-
+    const query = createOverpassClient(config, overpassParking.id);
     return {
       async parking(point, radiusM) {
         const r = Math.round(Math.min(radiusM, 3000));
         const ql = `[out:json][timeout:20];nwr["amenity"="parking"](around:${r},${point.lat.toFixed(6)},${point.lon.toFixed(6)});out center tags qt 200;`;
-        const data = await query(new URLSearchParams({ data: ql }).toString());
+        const data = await query(ql);
         const observedAt = data.osm3s?.timestamp_osm_base;
         const source = sourceFrom(overpassParking, observedAt);
         return (data.elements ?? [])

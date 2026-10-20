@@ -9,6 +9,9 @@ import { hereIncidents } from "@/providers/incidents/here";
 import { tomtomIncidents } from "@/providers/incidents/tomtom";
 import { wzdxIncidents } from "@/providers/incidents/wzdx";
 import { overpassParking } from "@/providers/parking/overpass";
+import { osrm } from "@/providers/routing/osrm";
+import { tomtomRouting } from "@/providers/routing/tomtom";
+import { overpassStops } from "@/providers/stops/overpass";
 import { hereTraffic } from "@/providers/traffic/here";
 import { tomtomTraffic } from "@/providers/traffic/tomtom";
 import type { ProviderDefinition, ProviderKindMap } from "@/providers/types";
@@ -37,6 +40,10 @@ export const ALL_PROVIDERS: ProviderDefinition[] = [
   staticJsonCameras,
   tflJamCams,
   overpassParking,
+  // routing: TomTom first when keyed (traffic-aware), OSRM is the free default.
+  tomtomRouting,
+  osrm,
+  overpassStops,
   ollama,
   anthropic,
 ];
@@ -54,6 +61,7 @@ let instancesConfig: AppConfig | undefined;
 function preferred(kind: ProviderKind, config: AppConfig): string | undefined {
   if (kind === "traffic" || kind === "incidents") return config.TRAFFIC_PROVIDER || undefined;
   if (kind === "ai") return config.AI_PROVIDER || undefined;
+  if (kind === "routing") return config.ROUTING_PROVIDER || undefined;
   return undefined;
 }
 
@@ -65,6 +73,8 @@ function build(config: AppConfig): Instances {
     incidents: [],
     cameras: [],
     parking: [],
+    routing: [],
+    stops: [],
     ai: [],
   } as unknown as Instances;
   for (const def of ALL_PROVIDERS) {

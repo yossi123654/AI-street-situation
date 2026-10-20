@@ -11,9 +11,9 @@ says which source each fact came from and what is missing.
 
 ![Jerusalem, Hebrew (RTL), real data](docs/screenshots/real-jerusalem-he.png)
 
-|                                                                    |                                                                                          |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| ![London, English, real data](docs/screenshots/real-london-en.png) | ![Parking near Trafalgar Square, real data](docs/screenshots/real-london-en-parking.png) |
+|                                                                            |                                                                    |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| ![Trip Jerusalem → Tel Aviv, real data](docs/screenshots/real-trip-he.png) | ![London, English, real data](docs/screenshots/real-london-en.png) |
 
 <details>
 <summary>All features, including AI summary, traffic, incidents and cameras (test fixtures)</summary>
@@ -43,6 +43,13 @@ street grid.
   capacity, fee, access and opening hours, filters (free / public), map
   markers and one-tap navigation in Waze, Google Maps or OpenStreetMap. No
   key needed. (OSM has no live occupancy, and the app says so.)
+- **Trip planning**: "Jerusalem → Tel Aviv" gives the route on the map,
+  distance and travel time, the **weather along the route for the time you
+  will be at each point**, fuel stations and rest areas on the way with
+  their facilities, incidents in the corridor, and parking at the
+  destination. Routing is free with OSRM (openstreetmap.org's own server);
+  with a TomTom key the ETA includes live traffic and slow sections are
+  drawn on the route.
 - **Vector map** from OpenFreeMap (free, no key, no usage limits) rendered
   with MapLibre, with automatic fallback to raster tiles.
 - **Public cameras** from a community-maintained JSON registry and from
@@ -122,7 +129,10 @@ The defaults point at free community services with strict usage policies:
 - **OpenFreeMap** is free with no limits but has no SLA. For guaranteed
   uptime, self-host it or set `MAP_STYLE_URL` to another provider. The raster
   fallback (OpenStreetMap tiles) is for light use only.
-- **Overpass** (parking) is a shared community server. For heavy or
+- **OSRM** (trips) on routing.openstreetmap.de allows one request per
+  second and fair use only. Self-host OSRM or set `ROUTING_PROVIDER=tomtom`
+  for real traffic.
+- **Overpass** (parking, stops) is a shared community server. For heavy or
   commercial use, run your own and set `OVERPASS_URLS`.
 - **Nominatim** allows 1 request/second for your whole server (the app
   enforces this and caches results). Set `APP_USER_AGENT` with a contact URL,
@@ -143,6 +153,7 @@ Services
    LocationService            geocoding + 24 h cache
    SituationService           weather + traffic + incidents + cameras, in parallel
    ParkingService             nearby parking, 12 h cache
+   TripService                route → weather at ETA per point, traffic, incidents, stops, parking
    CameraRegistry             merges camera providers, Haversine search
    CameraImageService         fetches registry images only (SSRF-safe), memory-only
    CameraAvailabilityService  is the camera up, and how old is the image
@@ -153,6 +164,7 @@ Providers (src/providers, swappable, enabled by configuration)
    geocoding: nominatim · photon · google      weather: open-meteo
    traffic: tomtom · here                      incidents: tomtom · here · WZDx feeds
    cameras: community JSON · TfL JamCams       parking: overpass (OSM)
+   routing: osrm · tomtom (live traffic)       stops: overpass (OSM)
    ai: ollama · anthropic
 ```
 
@@ -171,8 +183,8 @@ npm run validate:cameras  # validate data/cameras
 ```
 
 End-to-end tests run the real app against `tests/e2e/mock-upstream.mjs`,
-which imitates Nominatim, Open-Meteo, TomTom, a WZDx feed, Overpass, Ollama,
-camera images, a vector map style and raster tiles. They need no network access and no keys.
+which imitates Nominatim, Open-Meteo, TomTom (traffic and routing), OSRM, a
+WZDx feed, Overpass, Ollama, camera images, a vector map style and raster tiles. They need no network access and no keys.
 
 ## Contributing
 

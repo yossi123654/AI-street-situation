@@ -27,12 +27,14 @@ export function ParkingCard({
   radiusM,
   selectedId,
   onSelect,
+  title,
 }: {
   section: Section<ParkingFacility[]> | undefined;
   loading: boolean;
   radiusM: number;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  title?: string;
 }) {
   const { t, formatDistance } = useI18n();
   const [filter, setFilter] = useState<Filter>("all");
@@ -50,7 +52,7 @@ export function ParkingCard({
   }, [selectedId]);
 
   return (
-    <Card id="parking" title={t("parking.title")} icon={<ParkingIcon />}>
+    <Card id="parking" title={title ?? t("parking.title")} icon={<ParkingIcon />}>
       {loading && !section ? (
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-sm text-slate-500">

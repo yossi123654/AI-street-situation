@@ -97,6 +97,13 @@ const schema = z.object({
     .pipe(z.array(z.url({ protocol: /^https?$/ })).min(1)),
   PARKING_SEARCH_RADIUS_M: int(800, 100, 3000),
 
+  /** osrm (free, default) | tomtom (key; traffic-aware ETA). Empty = first configured, TomTom preferred. */
+  ROUTING_PROVIDER: z.enum(["osrm", "tomtom", ""]).default(""),
+  /** OSRM base URL including the profile path, e.g. https://routing.openstreetmap.de/routed-car */
+  OSRM_URL: url("https://routing.openstreetmap.de/routed-car"),
+  TRIP_MAX_DISTANCE_KM: int(500, 10, 5000),
+  TRIP_STOPS_ENABLED: bool(true),
+
   AI_PROVIDER: z.enum(["ollama", "anthropic", ""]).default(""),
   OLLAMA_URL: optionalString,
   OLLAMA_MODEL: z.string().trim().default("qwen2.5vl:7b"),

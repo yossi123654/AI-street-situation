@@ -379,6 +379,8 @@ describe("registry", () => {
       "weather:open-meteo",
       "cameras:community",
       "parking:overpass",
+      "routing:osrm",
+      "stops:overpass-stops",
     ]);
     expect(getProvider("traffic")).toBeUndefined();
     expect(getProvider("ai")).toBeUndefined();

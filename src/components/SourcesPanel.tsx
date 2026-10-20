@@ -3,31 +3,15 @@
 import { InfoIcon } from "@/components/icons";
 import { Card, cx } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
-import type {
-  AiSummary,
-  ParkingFacility,
-  ProviderStatus,
-  Section,
-  SituationReport,
-  SourceInfo,
-} from "@/lib/types";
+import type { AiSummary, ProviderStatus, Section, SourceInfo } from "@/lib/types";
 
 function collectSources(
-  report: SituationReport | undefined,
-  parking: Section<ParkingFacility[]> | undefined,
+  sections: Array<Section<unknown> | undefined>,
   summary: AiSummary | undefined,
 ): SourceInfo[] {
-  if (!report) return [];
   const all: SourceInfo[] = [];
-  const sections = [
-    report.weather,
-    report.traffic,
-    report.incidents,
-    report.cameras,
-    ...(parking ? [parking] : []),
-  ];
   for (const section of sections) {
-    if (section.status === "ok") all.push(...section.sources);
+    if (section?.status === "ok") all.push(...section.sources);
   }
   if (summary) {
     all.push({
@@ -43,18 +27,17 @@ function collectSources(
 }
 
 export function SourcesPanel({
-  report,
-  parking,
+  sections,
   providers,
   summary,
 }: {
-  report: SituationReport | undefined;
-  parking: Section<ParkingFacility[]> | undefined;
+  /** Every data section currently on screen; their sources are listed with attribution. */
+  sections: Array<Section<unknown> | undefined>;
   providers: ProviderStatus[];
   summary: AiSummary | undefined;
 }) {
   const { t, formatRelative } = useI18n();
-  const sources = collectSources(report, parking, summary);
+  const sources = collectSources(sections, summary);
   const geocoder = providers.find((p) => p.kind === "geocoding" && p.active);
   return (
     <Card id="sources" title={t("sources.title")} icon={<InfoIcon />}>

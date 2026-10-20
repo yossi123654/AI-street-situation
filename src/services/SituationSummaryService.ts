@@ -9,12 +9,14 @@ import type {
   ParkingFacility,
   Section,
   SituationReport,
+  TripReport,
   VisionAnalysis,
 } from "@/lib/types";
 import { getProvider } from "@/providers/registry";
-import { summarySystemPrompt } from "@/services/ai/prompts";
+import { summarySystemPrompt, tripSummarySystemPrompt } from "@/services/ai/prompts";
 import type { CameraRegistry } from "@/services/CameraRegistry";
 import type { ParkingService } from "@/services/ParkingService";
+import type { TripService } from "@/services/TripService";
 import type { SituationService } from "@/services/SituationService";
 import type { VisionAnalyzer } from "@/services/VisionAnalyzer";
 
@@ -114,6 +116,113 @@ export function buildSummaryFacts(
   };
 }
 
+/** Compact facts for the trip briefing. */
+export function buildTripFacts(report: TripReport) {
+  const r = report.route;
+  const route =
+    r.status === "ok"
+      ? {
+          distanceKm: Math.round(r.data.distanceM / 100) / 10,
+          travelTimeMinutes: Math.round(r.data.durationS / 60),
+          includesLiveTraffic: r.data.trafficAware,
+          ...(r.data.noTrafficDurationS !== undefined
+            ? { travelTimeWithoutTrafficMinutes: Math.round(r.data.noTrafficDurationS / 60) }
+            : {}),
+          ...(r.data.trafficDelayS !== undefined
+            ? { trafficDelayMinutes: Math.round(r.data.trafficDelayS / 60) }
+            : {}),
+          mainRoads: r.data.roads.slice(0, 6),
+          source: r.data.source.name,
+        }
+      : { missing: r.reason };
+  const t = report.trafficAlong;
+  const w = report.weatherAlong;
+  const i = report.incidents;
+  const s = report.stops;
+  const p = report.destinationParking;
+  return {
+    from: report.from.label ?? `${report.from.lat}, ${report.from.lon}`,
+    to: report.to.label ?? `${report.to.lat}, ${report.to.lon}`,
+    departure: report.departureTime,
+    route,
+    trafficOnTheWay:
+      t.status === "ok"
+        ? {
+            freshness: t.freshness,
+            slowSections: t.data.sections.map((x) => ({
+              atKm: Math.round(x.distanceAlongM / 1000),
+              lengthKm: Math.round(x.lengthM / 100) / 10,
+              category: x.category,
+              severity: x.severity,
+              delayMinutes: Math.round(x.delayS / 60),
+              effectiveSpeedKmh: x.effectiveSpeedKmh,
+            })),
+            sampledFlow: t.data.samples.map((x) => ({
+              atKm: Math.round(x.distanceAlongM / 1000),
+              road: x.roadName ?? null,
+              level: x.flow.level,
+              currentSpeedKmh: x.flow.currentSpeedKmh,
+              freeFlowSpeedKmh: x.flow.freeFlowSpeedKmh,
+            })),
+          }
+        : { missing: t.reason },
+    incidentsOnTheWay:
+      i.status === "ok"
+        ? {
+            count: i.data.length,
+            items: i.data.slice(0, 8).map((x) => ({
+              atKm: Math.round((x.distanceM ?? 0) / 1000),
+              type: x.type,
+              severity: x.severity,
+              description: x.description,
+              road: x.roadName ?? null,
+              roadClosed: x.roadClosed ?? false,
+            })),
+          }
+        : { missing: i.reason },
+    weatherAlongTheWay:
+      w.status === "ok"
+        ? w.data.map((x) => ({
+            atKm: Math.round(x.distanceAlongM / 1000),
+            road: x.roadName ?? null,
+            minutesAfterDeparture: Math.round(x.etaOffsetS / 60),
+            valuesAre: x.kind,
+            temperatureC: x.temperatureC,
+            wmoWeatherCode: x.weatherCode,
+            precipitationMm: x.precipitationMm,
+            windSpeedKmh: x.windSpeedKmh,
+            visibilityM: x.visibilityM,
+          }))
+        : { missing: w.reason },
+    placesToStop:
+      s.status === "ok"
+        ? {
+            count: s.data.length,
+            examples: s.data
+              .filter((x) => x.kind !== "charging")
+              .filter((_, idx, arr) => idx % Math.max(1, Math.floor(arr.length / 5)) === 0)
+              .slice(0, 5)
+              .map((x) => ({
+                atKm: Math.round(x.distanceAlongM / 1000),
+                kind: x.kind,
+                name: x.name ?? x.brand ?? null,
+                facilities: x.facilities,
+              })),
+          }
+        : { missing: s.reason },
+    parkingAtDestination:
+      p.status === "ok"
+        ? {
+            facilitiesFound: p.data.length,
+            freeOfCharge: p.data.filter((x) => x.fee === "no").length,
+            nearestDistanceM: p.data[0]?.distanceM ?? null,
+            liveOccupancy: "not available",
+          }
+        : { missing: p.reason },
+    missing: report.missing,
+  };
+}
+
 /**
  * Produces the AI-written summary of a situation report. It may analyse the
  * nearest camera image whose terms allow AI analysis.
@@ -126,7 +235,34 @@ export class SituationSummaryService {
     private readonly cameras: CameraRegistry,
     private readonly vision: VisionAnalyzer,
     private readonly parking?: ParkingService,
+    private readonly trip?: TripService,
   ) {}
+
+  async summarizeTrip(
+    from: LatLon & { label?: string },
+    to: LatLon & { label?: string },
+    locale: Locale,
+  ): Promise<AiSummary> {
+    const provider = getProvider("ai");
+    if (!provider) throw notConfigured("no AI provider is configured");
+    if (!this.trip) throw notConfigured("trip planning is not available");
+    const bucket = Math.floor(Date.now() / (5 * 60_000));
+    const key = `trip:${provider.def.id}:${locale}:${roundCoord(from.lat, 3)},${roundCoord(from.lon, 3)}:${roundCoord(to.lat, 3)},${roundCoord(to.lon, 3)}:${bucket}`;
+    return this.cache.getOrSet(key, 5 * 60_000, async () => {
+      const report = await this.trip!.plan(from, to, locale);
+      const facts = buildTripFacts(report);
+      const text = await provider.instance.complete({
+        system: tripSummarySystemPrompt(locale),
+        prompt: `Facts (JSON):\n${JSON.stringify(facts, null, 2)}\n\nWrite the trip briefing.`,
+      });
+      return {
+        text: text.trim(),
+        provider: { id: provider.def.id, name: provider.def.name, model: provider.instance.model },
+        generatedAt: new Date().toISOString(),
+        cameraAnalyses: [],
+      };
+    });
+  }
 
   async summarize(point: LatLon, locale: Locale, label?: string): Promise<AiSummary> {
     const provider = getProvider("ai");

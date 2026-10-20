@@ -99,3 +99,15 @@ export function parseCameraId(id: string): string {
   if (!/^[a-z]{2}-[a-z0-9-]{1,100}$/.test(id)) throw badRequest("invalid camera id");
   return id;
 }
+
+/** Parses "lat,lon" query values (with an optional `<name>Label`) for trip endpoints. */
+export function parseEndpoint(params: URLSearchParams, name: string): LatLon & { label?: string } {
+  const raw = params.get(name);
+  const match = raw?.trim().match(/^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!match) throw badRequest(`${name} must be "lat,lon"`);
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  if (!isValidLatLon(lat, lon)) throw badRequest(`${name} must be valid coordinates`);
+  const label = parseLabel(params.get(`${name}Label`));
+  return { lat, lon, ...(label ? { label } : {}) };
+}
