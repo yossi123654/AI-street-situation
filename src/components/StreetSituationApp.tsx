@@ -101,7 +101,13 @@ function readTripFromUrl(): TripSelection | null {
   const params = new URLSearchParams(window.location.search);
   const from = parseEndpointParam(params, "from");
   const to = parseEndpointParam(params, "to");
-  return from && to ? { from, to } : null;
+  const depart = params.get("depart");
+  // A shared link with a departure that has already passed means "now".
+  const departAt =
+    depart && Date.parse(depart) > Date.now() - 5 * 60_000
+      ? new Date(depart).toISOString()
+      : undefined;
+  return from && to ? { from, to, ...(departAt ? { departAt } : {}) } : null;
 }
 
 function writeTripToUrl(trip: TripSelection) {
@@ -110,6 +116,7 @@ function writeTripToUrl(trip: TripSelection) {
   params.set("to", `${trip.to.lat.toFixed(5)},${trip.to.lon.toFixed(5)}`);
   if (trip.from.label) params.set("fromLabel", trip.from.label);
   if (trip.to.label) params.set("toLabel", trip.to.label);
+  if (trip.departAt) params.set("depart", trip.departAt);
   window.history.replaceState(null, "", `?${params.toString()}`);
 }
 
@@ -139,8 +146,8 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
-  const planTrip = useCallback((from: TripEndpoint, to: TripEndpoint) => {
-    const next = { from, to };
+  const planTrip = useCallback((from: TripEndpoint, to: TripEndpoint, departAt?: string) => {
+    const next = { from, to, ...(departAt ? { departAt } : {}) };
     setTrip(next);
     setSelectedStopId(null);
     setSelectedParkingId(null);
@@ -351,7 +358,7 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
             />
           ) : (
             <TripSearch
-              key={trip ? `${trip.from.lat},${trip.to.lat}` : "empty"}
+              key={trip ? `${trip.from.lat},${trip.to.lat},${trip.departAt ?? "now"}` : "empty"}
               initial={trip ?? undefined}
               onPlan={planTrip}
             />
@@ -426,7 +433,9 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
                 {tripData.report?.status === "error" ? (
                   <Notice tone="error">
                     <p>
-                      {tripData.report.code === "bad_request" ? t("trip.tooFar") : t("trip.error")}
+                      {tripData.report.code === "bad_request"
+                        ? t("trip.tooFarOrInvalid")
+                        : t("trip.error")}
                     </p>
                     <button
                       type="button"

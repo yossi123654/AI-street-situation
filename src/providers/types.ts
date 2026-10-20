@@ -51,8 +51,19 @@ export interface StopsProvider {
   stopsAlong(line: Array<[number, number]>, radiusM: number): Promise<TripStop[]>;
 }
 
+export interface RouteOptions {
+  /** Leave at this time instead of now. Routers with traffic models use it to predict traffic. */
+  departAt?: Date;
+}
+
 export interface RoutingProvider {
-  route(from: LatLon, to: LatLon, mode: TravelMode, locale: Locale): Promise<Route>;
+  route(
+    from: LatLon,
+    to: LatLon,
+    mode: TravelMode,
+    locale: Locale,
+    options?: RouteOptions,
+  ): Promise<Route>;
 }
 
 export interface TrafficProvider {

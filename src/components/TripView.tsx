@@ -68,7 +68,7 @@ export function TripOverviewCard({
   summary: SummaryState;
   parkingRadiusM: number;
 }) {
-  const { t, formatDistance, formatDuration, formatClock, formatNumber } = useI18n();
+  const { t, formatDistance, formatDuration, formatClock, formatNumber, formatTime } = useI18n();
   void parkingRadiusM;
   if (!report) {
     return (
@@ -124,17 +124,30 @@ export function TripOverviewCard({
           </dl>
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <ClockIcon className="text-slate-400" />
-            <span className="text-slate-600 dark:text-slate-400">{t("trip.departNow")}.</span>
+            <span className="text-slate-600 dark:text-slate-400" data-testid="trip-departure">
+              {report.departureIsNow
+                ? t("trip.departNow")
+                : t("trip.departAt", { time: formatTime(report.departureTime) })}
+              .
+            </span>
             {route.data.trafficAware ? (
               <>
                 <span className="font-medium text-emerald-700 dark:text-emerald-400">
-                  {t("trip.withTraffic")}.
+                  {route.data.trafficKind === "predicted"
+                    ? t("trip.withPredictedTraffic")
+                    : t("trip.withTraffic")}
+                  .
                 </span>
                 <span className="text-slate-600 dark:text-slate-400">
                   {route.data.trafficDelayS && route.data.trafficDelayS >= 120
-                    ? t("trip.delay", {
-                        minutes: formatNumber(Math.round(route.data.trafficDelayS / 60)),
-                      })
+                    ? t(
+                        route.data.trafficKind === "predicted"
+                          ? "trip.predictedDelay"
+                          : "trip.delay",
+                        {
+                          minutes: formatNumber(Math.round(route.data.trafficDelayS / 60)),
+                        },
+                      )
                     : t("trip.noDelay")}
                 </span>
               </>

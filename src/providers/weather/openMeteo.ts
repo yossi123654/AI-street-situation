@@ -100,7 +100,16 @@ export const openMeteo: ProviderDefinition<"weather"> = {
           longitude: points.map((p) => p.lon.toFixed(3)).join(","),
           current: CURRENT_VARS.join(","),
           hourly: HOURLY_VARS.join(","),
-          forecast_days: 2,
+          // Cover the latest requested time (trips can start up to a week ahead).
+          forecast_days: Math.min(
+            16,
+            Math.max(
+              2,
+              Math.ceil(
+                (Math.max(...points.map((p) => p.at.getTime())) - Date.now()) / 86_400_000,
+              ) + 1,
+            ),
+          ),
           wind_speed_unit: "kmh",
           timezone: "GMT",
         });

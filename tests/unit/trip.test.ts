@@ -589,3 +589,162 @@ describe("trip facts and parsing", () => {
     expect(collapseToSettlement([inside, city])).toHaveLength(2);
   });
 });
+
+describe("departure time", () => {
+  it("parses depart and rejects past, far-future and malformed times", async () => {
+    const { parseDeparture } = await import("@/lib/api");
+    const now = Date.parse("2026-10-20T08:00:00Z");
+    expect(parseDeparture(new URLSearchParams(), now)).toBeUndefined();
+    expect(parseDeparture(new URLSearchParams({ depart: "now" }), now)).toBeUndefined();
+    expect(
+      parseDeparture(new URLSearchParams({ depart: "2026-10-20T17:00:00Z" }), now)?.toISOString(),
+    ).toBe("2026-10-20T17:00:00.000Z");
+    expect(() =>
+      parseDeparture(new URLSearchParams({ depart: "2026-10-20T07:00:00Z" }), now),
+    ).toThrow(/past/);
+    expect(() =>
+      parseDeparture(new URLSearchParams({ depart: "2026-10-30T08:00:00Z" }), now),
+    ).toThrow(/7 days/);
+    expect(() => parseDeparture(new URLSearchParams({ depart: "tomorrow" }), now)).toThrow(/ISO/);
+  });
+
+  it("keys caches by 15-minute departure slots and treats the next few minutes as now", async () => {
+    const { departureKey, isFutureDeparture } = await import("@/services/TripService");
+    const now = Date.parse("2026-10-20T08:00:00Z");
+    expect(departureKey(undefined, now)).toBe("now");
+    expect(departureKey(new Date(now + 2 * 60_000), now)).toBe("now");
+    expect(isFutureDeparture(new Date(now + 60 * 60_000), now)).toBe(true);
+    expect(departureKey(new Date(now + 60 * 60_000), now)).toBe(
+      departureKey(new Date(now + 64 * 60_000), now),
+    );
+    expect(departureKey(new Date(now + 60 * 60_000), now)).not.toBe(
+      departureKey(new Date(now + 90 * 60_000), now),
+    );
+  });
+
+  it("asks TomTom for predicted traffic at the departure time", async () => {
+    restore = withEnv({ TOMTOM_API_KEY: "k", TOMTOM_URL: "https://tt.example.org" });
+    const departAt = new Date("2026-10-21T14:00:00Z");
+    mockFetch((url) => {
+      expect(url.searchParams.get("departAt")).toBe("2026-10-21T14:00:00+00:00");
+      return jsonResponse({
+        routes: [
+          {
+            summary: { lengthInMeters: 1000, travelTimeInSeconds: 100 },
+            legs: [
+              {
+                points: [
+                  { latitude: 31, longitude: 35 },
+                  { latitude: 31.01, longitude: 35 },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    });
+    const route = await tomtomRouting
+      .create(getConfig())
+      .route(JERUSALEM, TEL_AVIV, "car", "en", { departAt });
+    expect(route.trafficKind).toBe("predicted");
+  });
+
+  it("plans a later trip: forecast weather at departure + ETA, no live flow sampling, old incidents dropped", async () => {
+    restore = withEnv({
+      OSRM_URL: "https://osrm.example.org/routed-car",
+      OPEN_METEO_URL: "https://meteo.example.org",
+      TOMTOM_API_KEY: "k",
+      TOMTOM_URL: "https://tt.example.org",
+      ROUTING_PROVIDER: "osrm",
+      PARKING_ENABLED: "false",
+    });
+    const departAt = new Date(Date.now() + 26 * 3_600_000);
+    const flowCalls: string[] = [];
+    let forecastDays = "";
+    mockFetch((url) => {
+      if (url.hostname === "osrm.example.org") {
+        return jsonResponse({
+          code: "Ok",
+          routes: [
+            {
+              distance: 33_000,
+              duration: 1800,
+              geometry: { type: "LineString", coordinates: line.map(([lat, lon]) => [lon, lat]) },
+              legs: [{ steps: [] }],
+            },
+          ],
+        });
+      }
+      if (url.hostname === "meteo.example.org") {
+        forecastDays = url.searchParams.get("forecast_days") ?? "";
+        const n = url.searchParams.get("latitude")!.split(",").length;
+        const hourStart = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+        const times = Array.from({ length: 72 }, (_, i) =>
+          new Date(hourStart + i * 3_600_000).toISOString().slice(0, 16),
+        );
+        return jsonResponse(
+          Array.from({ length: n }, () => ({
+            current: { time: times[0], temperature_2m: 99 },
+            hourly: { time: times, temperature_2m: times.map((_, i) => i) },
+          })),
+        );
+      }
+      if (url.pathname.includes("flowSegmentData")) {
+        flowCalls.push(url.href);
+        return jsonResponse({ flowSegmentData: { currentSpeed: 10, freeFlowSpeed: 50 } });
+      }
+      if (url.pathname.includes("incidentDetails")) {
+        return jsonResponse({
+          incidents: [
+            {
+              geometry: { type: "Point", coordinates: [35, 31.1] },
+              properties: {
+                id: "ends-soon",
+                iconCategory: 9,
+                endTime: new Date(Date.now() + 3_600_000).toISOString(),
+              },
+            },
+            {
+              geometry: { type: "Point", coordinates: [35, 31.2] },
+              properties: {
+                id: "long-works",
+                iconCategory: 9,
+                endTime: new Date(Date.now() + 5 * 86_400_000).toISOString(),
+              },
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected ${url.href}`);
+    });
+    const service = new TripService(new ParkingService());
+    const report = await service.plan(
+      { lat: 31, lon: 35 },
+      { lat: 31.3, lon: 35 },
+      "en",
+      "car",
+      departAt,
+    );
+    expect(report.departureIsNow).toBe(false);
+    expect(report.departureTime).toBe(departAt.toISOString());
+    expect(Number(forecastDays)).toBeGreaterThanOrEqual(3);
+    expect(report.weatherAlong.status).toBe("ok");
+    if (report.weatherAlong.status === "ok") {
+      expect(report.weatherAlong.data.every((p) => p.kind === "forecast")).toBe(true);
+      // The first point is at departure, ~26 h ahead: hourly slot 26 (value 26), not "current" (99).
+      expect(report.weatherAlong.data[0]!.temperatureC).toBeGreaterThanOrEqual(25);
+      expect(report.weatherAlong.data[0]!.temperatureC).toBeLessThanOrEqual(27);
+    }
+    expect(report.trafficAlong).toEqual({ status: "unavailable", reason: "not_live" });
+    expect(flowCalls).toHaveLength(0);
+    expect(report.incidents.status).toBe("ok");
+    if (report.incidents.status === "ok")
+      expect(report.incidents.data.map((i) => i.id)).toEqual(["tomtom:long-works"]);
+
+    // Leaving now still samples live flow.
+    const now = await service.plan({ lat: 31, lon: 35 }, { lat: 31.3, lon: 35 }, "en");
+    expect(now.departureIsNow).toBe(true);
+    expect(now.trafficAlong.status).toBe("ok");
+    expect(flowCalls.length).toBeGreaterThan(0);
+  });
+});

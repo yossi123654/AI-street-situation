@@ -144,3 +144,21 @@ export function parseEndpoint(params: URLSearchParams, name: string): LatLon & {
   const label = parseLabel(params.get(`${name}Label`));
   return { lat, lon, ...(label ? { label } : {}) };
 }
+
+/** Furthest departure the trip planner accepts (forecasts get unreliable beyond a week). */
+export const MAX_DEPARTURE_AHEAD_MS = 7 * 24 * 60 * 60_000;
+
+/**
+ * Parses `depart`: missing or "now" means now; otherwise an ISO 8601 time
+ * between 5 minutes ago and 7 days ahead.
+ */
+export function parseDeparture(params: URLSearchParams, now = Date.now()): Date | undefined {
+  const raw = params.get("depart")?.trim();
+  if (!raw || raw === "now") return undefined;
+  const time = Date.parse(raw);
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(raw) || Number.isNaN(time))
+    throw badRequest('depart must be an ISO 8601 time or "now"');
+  if (time < now - 5 * 60_000) throw badRequest("depart must not be in the past");
+  if (time > now + MAX_DEPARTURE_AHEAD_MS) throw badRequest("depart must be within 7 days");
+  return new Date(time);
+}

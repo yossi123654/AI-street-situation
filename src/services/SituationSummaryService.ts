@@ -17,7 +17,7 @@ import { summarySystemPrompt, tripSummarySystemPrompt } from "@/services/ai/prom
 import type { CameraRegistry } from "@/services/CameraRegistry";
 import type { LocationService } from "@/services/LocationService";
 import type { ParkingService } from "@/services/ParkingService";
-import type { TripService } from "@/services/TripService";
+import { departureKey, type TripService } from "@/services/TripService";
 import type { SituationService } from "@/services/SituationService";
 import type { VisionAnalyzer } from "@/services/VisionAnalyzer";
 
@@ -125,7 +125,8 @@ export function buildTripFacts(report: TripReport) {
       ? {
           distanceKm: Math.round(r.data.distanceM / 100) / 10,
           travelTimeMinutes: Math.round(r.data.durationS / 60),
-          includesLiveTraffic: r.data.trafficAware,
+          includesLiveTraffic: r.data.trafficKind === "live",
+          includesPredictedTraffic: r.data.trafficKind === "predicted",
           ...(r.data.noTrafficDurationS !== undefined
             ? { travelTimeWithoutTrafficMinutes: Math.round(r.data.noTrafficDurationS / 60) }
             : {}),
@@ -145,6 +146,7 @@ export function buildTripFacts(report: TripReport) {
     from: report.from.label ?? `${report.from.lat}, ${report.from.lon}`,
     to: report.to.label ?? `${report.to.lat}, ${report.to.lon}`,
     departure: report.departureTime,
+    departureIsNow: report.departureIsNow,
     route,
     trafficOnTheWay:
       t.status === "ok"
@@ -256,15 +258,16 @@ export class SituationSummaryService {
   }
 
   async summarizeTrip(
-    from: LatLon & { label?: string },
-    to: LatLon & { label?: string },
+    from: LatLon,
+    to: LatLon,
     locale: Locale,
+    departAt?: Date,
   ): Promise<AiSummary> {
     const provider = getProvider("ai");
     if (!provider) throw notConfigured("no AI provider is configured");
     if (!this.trip) throw notConfigured("trip planning is not available");
     const bucket = Math.floor(Date.now() / (5 * 60_000));
-    const key = `trip:${provider.def.id}:${locale}:${roundCoord(from.lat, 3)},${roundCoord(from.lon, 3)}:${roundCoord(to.lat, 3)},${roundCoord(to.lon, 3)}:${bucket}`;
+    const key = `trip:${provider.def.id}:${locale}:${roundCoord(from.lat, 3)},${roundCoord(from.lon, 3)}:${roundCoord(to.lat, 3)},${roundCoord(to.lon, 3)}:${bucket}:${departureKey(departAt)}`;
     return this.cache.getOrSet(key, 5 * 60_000, async () => {
       const [fromLabel, toLabel] = await Promise.all([
         this.trustedLabel(from, locale),
@@ -274,6 +277,8 @@ export class SituationSummaryService {
         { lat: from.lat, lon: from.lon, ...(fromLabel ? { label: fromLabel } : {}) },
         { lat: to.lat, lon: to.lon, ...(toLabel ? { label: toLabel } : {}) },
         locale,
+        "car",
+        departAt,
       );
       const facts = buildTripFacts(report);
       const text = await provider.instance.complete({

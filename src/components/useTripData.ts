@@ -9,6 +9,8 @@ import type { AiSummary, Locale, Section, TripReport, TripStop } from "@/lib/typ
 export interface TripSelection {
   from: TripEndpoint;
   to: TripEndpoint;
+  /** ISO time; absent means "leave now". */
+  departAt?: string;
 }
 
 export type TripState =
@@ -22,6 +24,7 @@ function tripParams(trip: TripSelection, locale: Locale) {
   });
   if (trip.from.label) params.set("fromLabel", trip.from.label);
   if (trip.to.label) params.set("toLabel", trip.to.label);
+  if (trip.departAt) params.set("depart", trip.departAt);
   return params;
 }
 

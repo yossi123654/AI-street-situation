@@ -1,9 +1,9 @@
-import { apiHandler, json, parseEndpoint, parseLocale } from "@/lib/api";
+import { apiHandler, json, parseDeparture, parseEndpoint, parseLocale } from "@/lib/api";
 import { services } from "@/services";
 
 export const dynamic = "force-dynamic";
 
-/** GET /api/trip?from=lat,lon&to=lat,lon&lang=&fromLabel=&toLabel= → TripReport */
+/** GET /api/trip?from=lat,lon&to=lat,lon&depart=ISO|now&lang=&fromLabel=&toLabel= → TripReport */
 export const GET = apiHandler(
   async (request) => {
     const params = request.nextUrl.searchParams;
@@ -11,6 +11,8 @@ export const GET = apiHandler(
       parseEndpoint(params, "from"),
       parseEndpoint(params, "to"),
       parseLocale(params.get("lang")),
+      "car",
+      parseDeparture(params),
     );
     return json(report);
   },

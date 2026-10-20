@@ -23,6 +23,17 @@ interface FieldState {
 
 const empty = (): FieldState => ({ text: "" });
 
+const MAX_AHEAD_MS = 7 * 24 * 60 * 60_000;
+
+/** Current time. Only called from event handlers, never during render. */
+const nowMs = () => Date.now();
+
+/** "YYYY-MM-DDTHH:mm" in the browser's local time, for <input type="datetime-local">. */
+export function toLocalInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 /**
  * Origin and destination inputs. Geocoding runs only when the form is
  * submitted (the public Nominatim instance forbids autocomplete); ambiguous
@@ -32,8 +43,8 @@ export function TripSearch({
   initial,
   onPlan,
 }: {
-  initial?: { from?: TripEndpoint; to?: TripEndpoint };
-  onPlan: (from: TripEndpoint, to: TripEndpoint) => void;
+  initial?: { from?: TripEndpoint; to?: TripEndpoint; departAt?: string };
+  onPlan: (from: TripEndpoint, to: TripEndpoint, departAt?: string) => void;
 }) {
   const { t, locale } = useI18n();
   const [from, setFrom] = useState<FieldState>(() =>
@@ -43,6 +54,13 @@ export function TripSearch({
     initial?.to ? { text: initial.to.label ?? "", place: initial.to } : empty(),
   );
   const [busy, setBusy] = useState(false);
+  // Departure: "" = now; otherwise a datetime-local value in the browser's time zone.
+  const [departLocal, setDepartLocal] = useState(() =>
+    initial?.departAt ? toLocalInput(new Date(initial.departAt)) : "",
+  );
+  const [leaveLater, setLeaveLater] = useState(Boolean(initial?.departAt));
+  // Picker bounds, set when the user chooses "Later" (reading the clock during render is impure).
+  const [bounds, setBounds] = useState<{ min: string; max: string } | null>(null);
   const [locating, setLocating] = useState(false);
   const [formMessage, setFormMessage] = useState<string | null>(null);
   const ids = { from: useId(), to: useId() };
@@ -85,9 +103,24 @@ export function TripSearch({
       setFormMessage(t("trip.samePlace"));
       return;
     }
+    let departAt: string | undefined;
+    if (leaveLater && departLocal) {
+      const time = new Date(departLocal);
+      const now = nowMs();
+      if (
+        Number.isNaN(time.getTime()) ||
+        time.getTime() < now - 5 * 60_000 ||
+        time.getTime() > now + MAX_AHEAD_MS
+      ) {
+        setFormMessage(t("trip.departInvalid"));
+        return;
+      }
+      departAt = time.toISOString();
+    }
     onPlan(
       { lat: a.lat, lon: a.lon, ...(a.label ? { label: a.label } : {}) },
       { lat: b.lat, lon: b.lon, ...(b.label ? { label: b.label } : {}) },
+      departAt,
     );
   };
 
@@ -228,6 +261,60 @@ export function TripSearch({
             <span className="sr-only">{t("search.myLocation")}</span>
           </button>
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-slate-500">{t("trip.leave")}:</span>
+        <div
+          role="group"
+          aria-label={t("trip.departAtLabel")}
+          className="inline-flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800"
+        >
+          {([false, true] as const).map((later) => (
+            <button
+              key={String(later)}
+              type="button"
+              aria-pressed={leaveLater === later}
+              data-testid={later ? "depart-later" : "depart-now"}
+              onClick={() => {
+                setLeaveLater(later);
+                if (later) {
+                  const now = nowMs();
+                  setBounds({
+                    min: toLocalInput(new Date(now)),
+                    max: toLocalInput(new Date(now + MAX_AHEAD_MS)),
+                  });
+                }
+                if (later && !departLocal) {
+                  // Default to the next full hour.
+                  const next = new Date(nowMs());
+                  next.setMinutes(0, 0, 0);
+                  next.setHours(next.getHours() + 1);
+                  setDepartLocal(toLocalInput(next));
+                }
+              }}
+              className={cx(
+                "rounded-md px-3 py-1 font-medium",
+                leaveLater === later
+                  ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
+                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400",
+              )}
+            >
+              {later ? t("trip.leaveLater") : t("trip.leaveNow")}
+            </button>
+          ))}
+        </div>
+        {leaveLater ? (
+          <input
+            type="datetime-local"
+            aria-label={t("trip.departAtLabel")}
+            value={departLocal}
+            min={bounds?.min}
+            max={bounds?.max}
+            onChange={(event) => setDepartLocal(event.target.value)}
+            className="h-9 rounded-lg border border-slate-300 bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            data-testid="depart-time"
+          />
+        ) : null}
       </div>
       {formMessage ? <Notice tone="warning">{formMessage}</Notice> : null}
       <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400">

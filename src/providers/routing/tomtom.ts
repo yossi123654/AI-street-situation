@@ -94,18 +94,23 @@ export function stepsFromInstructions(
     }));
 }
 
+/** RFC 3339 without milliseconds, as TomTom expects: 2026-10-20T14:00:00+00:00 */
+export function toTomTomDateTime(date: Date): string {
+  return `${date.toISOString().slice(0, 19)}+00:00`;
+}
+
 /** TomTom Routing API with live traffic: ETA includes current delays and jams are marked along the route. */
 export const tomtomRouting: ProviderDefinition<"routing"> = {
   id: "tomtom",
   kind: "routing",
-  name: "TomTom Routing (live traffic)",
+  name: "TomTom Routing (traffic)",
   homepage: "https://developer.tomtom.com/routing-api/documentation/tomtom-maps/calculate-route",
   attribution: "Routing and traffic © TomTom",
   requiredEnv: ["TOMTOM_API_KEY"],
   isEnabled: (config) => Boolean(config.TOMTOM_API_KEY),
   create(config) {
     return {
-      async route(from, to, mode, locale) {
+      async route(from, to, mode, locale, options = {}) {
         void mode; // only "car" is supported today
         const locations = `${from.lat.toFixed(6)},${from.lon.toFixed(6)}:${to.lat.toFixed(6)},${to.lon.toFixed(6)}`;
         const url = buildUrl(config.TOMTOM_URL, `routing/1/calculateRoute/${locations}/json`, {
@@ -117,6 +122,8 @@ export const tomtomRouting: ProviderDefinition<"routing"> = {
           computeTravelTimeFor: "all",
           instructionsType: "text",
           language: locale === "he" ? "he-IL" : "en-GB",
+          // A future departure switches TomTom from live to predicted traffic.
+          departAt: options.departAt ? toTomTomDateTime(options.departAt) : undefined,
         });
         const data = await upstreamJson<TomTomRouteResponse>(url, {
           providerId: tomtomRouting.id,
@@ -172,6 +179,7 @@ export const tomtomRouting: ProviderDefinition<"routing"> = {
           distanceM: summary.lengthInMeters,
           durationS: summary.travelTimeInSeconds,
           trafficAware: true,
+          trafficKind: options.departAt ? "predicted" : "live",
           ...(typeof summary.noTrafficTravelTimeInSeconds === "number"
             ? { noTrafficDurationS: summary.noTrafficTravelTimeInSeconds }
             : {}),

@@ -1,4 +1,4 @@
-import { apiHandler, json, parseEndpoint, parseLocale } from "@/lib/api";
+import { apiHandler, json, parseDeparture, parseEndpoint, parseLocale } from "@/lib/api";
 import { services } from "@/services";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,8 @@ export const GET = apiHandler(async (request) => {
     parseEndpoint(params, "from"),
     parseEndpoint(params, "to"),
     parseLocale(params.get("lang")),
+    "car",
+    parseDeparture(params),
   );
   return json(stops, { maxAge: 600 });
 });

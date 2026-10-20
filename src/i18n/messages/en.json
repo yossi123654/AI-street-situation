@@ -69,7 +69,8 @@
     "notConfigured": "No data from this source: no provider is configured.",
     "notConfiguredHint": "Self-hosters can enable one in .env (see the README).",
     "error": "The data source is unavailable right now.",
-    "noData": "The provider returned no data for this location."
+    "noData": "The provider returned no data for this location.",
+    "notLive": "Live traffic is only shown for trips leaving now."
   },
   "summary": {
     "title": "Summary",
@@ -368,6 +369,15 @@
     "example2To": "Be'er Sheva",
     "mapStart": "Start",
     "mapEnd": "Destination",
-    "fixMap": "Fix the map"
+    "fixMap": "Fix the map",
+    "leave": "Leave",
+    "leaveNow": "Now",
+    "leaveLater": "Later",
+    "departAtLabel": "Departure time",
+    "departAt": "Leaving {time}",
+    "withPredictedTraffic": "Includes predicted traffic for that time",
+    "predictedDelay": "about {minutes} min of expected delay",
+    "departInvalid": "Choose a departure time within the next 7 days.",
+    "tooFarOrInvalid": "This trip can't be planned: check the departure time and distance."
   }
 }

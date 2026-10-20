@@ -68,6 +68,19 @@ async function section<T>(
   }
 }
 
+/** Departures within this window count as "now" (live data applies). */
+const NOW_WINDOW_MS = 5 * 60_000;
+
+export function isFutureDeparture(departAt: Date | undefined, now = Date.now()): departAt is Date {
+  return Boolean(departAt && departAt.getTime() - now > NOW_WINDOW_MS);
+}
+
+/** Cache-key part for a departure: "now", or the time rounded to 15 minutes. */
+export function departureKey(departAt: Date | undefined, now = Date.now()): string {
+  if (!isFutureDeparture(departAt, now)) return "now";
+  return String(Math.round(departAt.getTime() / (15 * 60_000)));
+}
+
 /** Road name of the step covering a given distance along the route. */
 export function roadAt(route: Route, distanceM: number): string | undefined {
   // Steps only cover the major roads; between them the name is unknown.
@@ -129,6 +142,7 @@ export class TripService {
     to: Endpoint,
     locale: Locale,
     mode: TravelMode = "car",
+    departAt?: Date,
   ): Promise<TripReport> {
     const config = getConfig();
     const straightKm = haversineMeters(from, to) / 1000;
@@ -143,11 +157,19 @@ export class TripService {
       roundCoord(to.lon, 3),
       mode,
       locale,
+      departureKey(departAt),
     ].join(",");
     // The cached report is shared between users, so it never stores their labels:
     // labels are user input (from the URL) and are attached per request.
     const bare = await this.reportCache.getOrSet(key, 3 * MINUTE, () =>
-      this.build({ lat: from.lat, lon: from.lon }, { lat: to.lat, lon: to.lon }, locale, mode, key),
+      this.build(
+        { lat: from.lat, lon: from.lon },
+        { lat: to.lat, lon: to.lon },
+        locale,
+        mode,
+        key,
+        isFutureDeparture(departAt) ? departAt : undefined,
+      ),
     );
     return {
       ...bare,
@@ -162,19 +184,23 @@ export class TripService {
     locale: Locale,
     mode: TravelMode,
     key: string,
+    /** Set only for departures more than a few minutes ahead. */
+    departAt?: Date,
   ): Promise<TripReport> {
-    const departureTime = new Date();
+    const departureIsNow = !departAt;
+    const departureTime = departAt ?? new Date();
     const routing = getProvider("routing");
     const route = await section<Route>("route", Boolean(routing), async () => {
       // Traffic-aware routes change quickly; free-flow routes can be cached longer.
       const data = await this.routeCache.getOrSet(
         `${routing!.def.id}:${key}`,
         routing!.def.id === "osrm" ? 30 * MINUTE : 3 * MINUTE,
-        () => routing!.instance.route(from, to, mode, locale),
+        () => routing!.instance.route(from, to, mode, locale, departAt ? { departAt } : {}),
       );
       return {
         data,
-        freshness: data.trafficAware ? freshnessOf("traffic", data.source.observedAt) : "unknown",
+        freshness:
+          data.trafficKind === "live" ? freshnessOf("traffic", data.source.observedAt) : "unknown",
         sources: [data.source],
       };
     });
@@ -194,6 +220,7 @@ export class TripService {
         mode,
         generatedAt: new Date().toISOString(),
         departureTime: departureTime.toISOString(),
+        departureIsNow,
         ...base,
         ...assessTrip(base),
       };
@@ -210,8 +237,8 @@ export class TripService {
     // Stops are fetched separately (/api/trip/stops): Overpass can be slow and must not delay the trip.
     const [weatherAlong, trafficAlong, incidents, destinationParking] = await Promise.all([
       this.weatherAlong(r, cumulative, departureTime, pointAt),
-      this.trafficAlong(r, cumulative, pointAt),
-      this.incidentsAlong(r, cumulative, locale, pointAt),
+      this.trafficAlong(r, cumulative, pointAt, departureIsNow),
+      this.incidentsAlong(r, cumulative, locale, pointAt, departureTime),
       this.parking.find(to, getConfig().PARKING_SEARCH_RADIUS_M),
     ]);
     const stops: Section<TripStop[]> = getProvider("stops")
@@ -225,6 +252,7 @@ export class TripService {
       mode,
       generatedAt: new Date().toISOString(),
       departureTime: departureTime.toISOString(),
+      departureIsNow,
       ...base,
       ...assessTrip(base),
     };
@@ -299,9 +327,19 @@ export class TripService {
       distanceAlongM: number;
       etaOffsetS: number;
     },
+    departureIsNow: boolean,
   ) {
     const flow = getProvider("traffic");
     const available = route.trafficAware || Boolean(flow);
+    if (available && !route.trafficAware && !departureIsNow) {
+      // Sampled flow is live: it says nothing about traffic at a later departure.
+      return Promise.resolve<
+        Section<{ sections: RouteTrafficSection[]; samples: RouteTrafficSample[] }>
+      >({
+        status: "unavailable",
+        reason: "not_live",
+      });
+    }
     return section<{ sections: RouteTrafficSection[]; samples: RouteTrafficSample[] }>(
       "traffic",
       available,
@@ -309,7 +347,10 @@ export class TripService {
         if (route.trafficAware) {
           return {
             data: { sections: route.trafficSections ?? [], samples: [] },
-            freshness: freshnessOf("traffic", route.source.observedAt),
+            freshness:
+              route.trafficKind === "predicted"
+                ? "unknown"
+                : freshnessOf("traffic", route.source.observedAt),
             sources: [route.source],
           };
         }
@@ -360,6 +401,7 @@ export class TripService {
       distanceAlongM: number;
       etaOffsetS: number;
     },
+    departure: Date,
   ) {
     const providers = getProviders("incidents");
     return section<Incident[]>("incidents", providers.length > 0, async () => {
@@ -381,6 +423,8 @@ export class TripService {
         if (res.status !== "fulfilled") continue;
         for (const incident of res.value) {
           if (incident.lat === undefined || incident.lon === undefined) continue;
+          // Over before the driver even leaves.
+          if (incident.endTime && Date.parse(incident.endTime) < departure.getTime()) continue;
           const nearest = nearestVertex(route.geometry, { lat: incident.lat, lon: incident.lon });
           if (nearest.index < 0 || nearest.distanceM > CORRIDOR_M) continue;
           // Reuse distanceM to mean "distance along the route" for trips.
@@ -420,8 +464,9 @@ export class TripService {
     to: Endpoint,
     locale: Locale,
     mode: TravelMode = "car",
+    departAt?: Date,
   ): Promise<Section<TripStop[]>> {
-    const report = await this.plan(from, to, locale, mode);
+    const report = await this.plan(from, to, locale, mode, departAt);
     if (report.route.status !== "ok") return { status: "unavailable", reason: "no_data" };
     const route = report.route.data;
     const key = `${roundCoord(from.lat, 3)},${roundCoord(from.lon, 3)}:${roundCoord(to.lat, 3)},${roundCoord(to.lon, 3)}:${mode}`;

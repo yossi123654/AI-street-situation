@@ -240,8 +240,9 @@ default and the UI says so.
   Implemented: attribution and the fix-the-map link appear in the trip
   overview, requests are throttled to one per second per server, routes are
   cached for 30 minutes.
-- Travel times are free-flow estimates. OSRM has no live traffic, and the UI
-  says so next to every OSRM travel time.
+- Travel times are free-flow estimates. OSRM has no live or predicted
+  traffic, and the UI says so next to every OSRM travel time, including for
+  later departures.
 - Verified live: Jerusalem → Tel Aviv, 66 km, 59 min, with Hebrew road names.
 
 ### TomTom Routing API (`TOMTOM_API_KEY`)
@@ -252,6 +253,9 @@ default and the UI says so.
   instructions. The response gives travel time with current traffic, the
   delay, and the slow sections (jam, road works, closure) with their
   effective speed, which the app draws on the route.
+- Departure time: for trips leaving later, the request adds `departAt`
+  (RFC 3339) and TomTom answers with **predicted** traffic for that time,
+  from historic patterns. The UI labels it "predicted", never "live".
 - Preferred automatically when the key is set (`ROUTING_PROVIDER` overrides).
   Commercial terms with a free tier; attribution "© TomTom" is shown.
 
@@ -270,8 +274,17 @@ default and the UI says so.
 - Open-Meteo, one request per trip with all sampled points (up to 12, one
   every 10 km) and the hourly forecast. Each point shows the conditions for
   the time the driver is expected there: current conditions within 30
-  minutes of departure, the nearest hourly forecast slot after that. Same
+  minutes of departure, the nearest hourly forecast slot after that. For a
+  later departure (up to 7 days ahead) every point uses the hourly
+  forecast, and the request asks for enough forecast days to cover it. Same
   terms and attribution as above.
+- Quota: the free API's daily limit is per IP address. Multi-location
+  requests are weighted, so a trip likely counts as several calls. On shared
+  cloud IPs the limit can already be used up by others: on 2026-10-20 this
+  project's sandbox received `HTTP 429 "Daily API request limit exceeded"`.
+  The app then shows the weather as unavailable and keeps the rest of the
+  trip. Production deployments should use an Open-Meteo API plan or a
+  self-hosted instance (`OPEN_METEO_URL`).
 
 ## Cameras
 

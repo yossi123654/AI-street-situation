@@ -154,9 +154,11 @@ export interface Route {
   /** [lat, lon] pairs. */
   geometry: Array<[number, number]>;
   distanceM: number;
-  /** Expected travel time. Includes live traffic when `trafficAware` is true. */
+  /** Expected travel time. Includes traffic when `trafficAware` is true. */
   durationS: number;
   trafficAware: boolean;
+  /** "live" for departures now, "predicted" (historic patterns) for later departures. */
+  trafficKind?: "live" | "predicted";
   /** Travel time without traffic, when the router reports it. */
   noTrafficDurationS?: number;
   trafficDelayS?: number;
@@ -226,6 +228,8 @@ export interface TripReport {
   mode: TravelMode;
   generatedAt: string;
   departureTime: string;
+  /** False when the user chose a later departure time. */
+  departureIsNow: boolean;
   route: Section<Route>;
   weatherAlong: Section<RoutePointWeather[]>;
   /** Either the router's own traffic sections or sampled flow; `null` data when neither applies. */
@@ -281,7 +285,8 @@ export interface CameraView extends Omit<Camera, "mediaUrl"> {
   videoUrl?: string;
 }
 
-export type UnavailableReason = "not_configured" | "error" | "no_data";
+/** not_live: the data only exists for "now" (e.g. live traffic) and the user asked about later. */
+export type UnavailableReason = "not_configured" | "error" | "no_data" | "not_live";
 
 export type Section<T> =
   | { status: "ok"; data: T; freshness: Freshness; sources: SourceInfo[] }

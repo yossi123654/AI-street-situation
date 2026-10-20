@@ -155,8 +155,8 @@ function tripSummaryText(facts, he) {
   if (r.distanceKm) {
     parts.push(
       he
-        ? `הנסיעה מ${facts.from.split(",")[0]} ל${facts.to.split(",")[0]} היא ${r.distanceKm} ק״מ וצפויה לקחת כ-${r.travelTimeMinutes} דקות${r.includesLiveTraffic ? ", כולל התנועה הנוכחית" : " בדרך פנויה, בלי נתוני תנועה בזמן אמת"}.`
-        : `The trip from ${facts.from.split(",")[0]} to ${facts.to.split(",")[0]} is ${r.distanceKm} km and should take about ${r.travelTimeMinutes} minutes${r.includesLiveTraffic ? ", including current traffic" : " in free-flowing traffic, with no live traffic data"}.`,
+        ? `הנסיעה מ${facts.from.split(",")[0]} ל${facts.to.split(",")[0]} היא ${r.distanceKm} ק״מ וצפויה לקחת כ-${r.travelTimeMinutes} דקות${r.includesLiveTraffic ? ", כולל התנועה הנוכחית" : r.includesPredictedTraffic ? ", לפי התנועה הצפויה בשעת היציאה" : " בדרך פנויה, בלי נתוני תנועה בזמן אמת"}.`
+        : `The trip from ${facts.from.split(",")[0]} to ${facts.to.split(",")[0]} is ${r.distanceKm} km and should take about ${r.travelTimeMinutes} minutes${r.includesLiveTraffic ? ", including current traffic" : r.includesPredictedTraffic ? ", with the traffic expected at departure time" : " in free-flowing traffic, with no live traffic data"}.`,
     );
   }
   const t = facts.trafficOnTheWay;
@@ -495,6 +495,59 @@ const server = createServer(async (req, res) => {
       longitude: from[1] + ((to[1] - from[1]) * i) / n,
     }));
     const he = q.get("language")?.startsWith("he");
+    // A future departure gets predicted (lighter) traffic and echoes the departure time.
+    const departAt = q.get("departAt");
+    if (departAt) {
+      const start = Date.parse(departAt);
+      return send(res, 200, {
+        formatVersion: "0.0.12",
+        routes: [
+          {
+            summary: {
+              lengthInMeters: 66_100,
+              travelTimeInSeconds: 3900,
+              trafficDelayInSeconds: 360,
+              trafficLengthInMeters: 4000,
+              departureTime: new Date(start).toISOString(),
+              arrivalTime: new Date(start + 3_900_000).toISOString(),
+              noTrafficTravelTimeInSeconds: 3540,
+            },
+            legs: [{ summary: {}, points }],
+            sections: [
+              {
+                startPointIndex: 30,
+                endPointIndex: 33,
+                sectionType: "TRAFFIC",
+                simpleCategory: "JAM",
+                effectiveSpeedInKmh: 35,
+                delayInSeconds: 360,
+                magnitudeOfDelay: 2,
+              },
+            ],
+            guidance: {
+              instructions: [
+                {
+                  routeOffsetInMeters: 0,
+                  travelTimeInSeconds: 0,
+                  street: he ? "כביש ירושלים תל אביב" : "Jerusalem–Tel Aviv Highway",
+                  roadNumbers: ["1"],
+                },
+                {
+                  routeOffsetInMeters: 56_700,
+                  travelTimeInSeconds: 3300,
+                  street: he ? "איילון צפון" : "Ayalon North",
+                  roadNumbers: ["20"],
+                },
+              ],
+            },
+            progress: [
+              { pointIndex: 0, travelTimeInSeconds: 0, distanceInMeters: 0 },
+              { pointIndex: n, travelTimeInSeconds: 3900, distanceInMeters: 66_100 },
+            ],
+          },
+        ],
+      });
+    }
     return send(res, 200, {
       formatVersion: "0.0.12",
       routes: [

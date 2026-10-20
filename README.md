@@ -47,9 +47,11 @@ street grid.
   distance and travel time, the **weather along the route for the time you
   will be at each point**, fuel stations and rest areas on the way with
   their facilities, incidents in the corridor, and parking at the
-  destination. Routing is free with OSRM (openstreetmap.org's own server);
-  with a TomTom key the ETA includes live traffic and slow sections are
-  drawn on the route.
+  destination. Leave now or **pick a departure time up to a week ahead**:
+  the weather follows that time, and with TomTom the ETA uses the traffic
+  predicted for it. Routing is free with OSRM (openstreetmap.org's own
+  server); with a TomTom key the ETA includes live (or predicted) traffic and
+  slow sections are drawn on the route.
 - **Vector map** from OpenFreeMap (free, no key, no usage limits) rendered
   with MapLibre, with automatic fallback to raster tiles.
 - **Public cameras** from a community-maintained JSON registry and from
