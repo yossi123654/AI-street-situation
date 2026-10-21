@@ -26,10 +26,10 @@
       },
       "refreshSeconds": 60,
       "verification": {
-        "lastVerified": "2026-10-14",
+        "lastVerified": "2026-10-21",
         "verifiedBy": "ai-street-situation maintainers"
       },
-      "notes": "The operator's page embeds a live video player and a YouTube playlist. No reuse terms were found on thekotel.org, so the camera is listed as an external link only. English page: https://thekotel.org/en/western-wall/western-wall-cameras/"
+      "notes": "The live view on the operator's page is played by a third-party player (wm.cast-tv.com). The YouTube playlist on the same page holds information videos, not the camera. No reuse terms were found on thekotel.org, so the camera is listed as an external link only. English page: https://thekotel.org/en/western-wall/western-wall-cameras/"
     }
   ]
 }

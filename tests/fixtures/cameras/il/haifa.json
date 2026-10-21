@@ -1,0 +1,27 @@
+{
+  "cameras": [
+    {
+      "id": "il-test-haifa-youtube",
+      "name": "Test YouTube live camera",
+      "country": "il",
+      "city": "haifa",
+      "location": { "lat": 32.8191, "lon": 34.9983 },
+      "cameraType": "scenic",
+      "mediaType": "youtube",
+      "sourceUrl": "https://example.org/haifa-live",
+      "mediaUrl": "https://www.youtube.com/watch?v=abcDEF12345",
+      "operator": { "name": "Test Channel" },
+      "license": {
+        "name": "YouTube Terms of Service (embedded player)",
+        "termsUrl": "https://www.youtube.com/t/terms"
+      },
+      "permissions": {
+        "embedAllowed": true,
+        "aiAnalysisAllowed": false,
+        "commercialUseAllowed": "unknown"
+      },
+      "refreshSeconds": 60,
+      "verification": { "lastVerified": "2026-10-21", "verifiedBy": "tests" }
+    }
+  ]
+}

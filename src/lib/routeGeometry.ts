@@ -117,3 +117,52 @@ export function thinLine(line: LatLonTuple[], max: number): LatLonTuple[] {
   if (out[out.length - 1] !== line[line.length - 1]) out.push(line[line.length - 1]!);
   return out;
 }
+
+/**
+ * Closest point on a polyline (segments, not just vertices) to `point`, with
+ * its distance from the line and its distance along it. Uses a local
+ * equirectangular projection per segment, which is accurate to well under a
+ * metre at the corridor widths used here (a few hundred metres). Needed where
+ * the geometry can be sparse, e.g. long straight highways with vertices
+ * kilometres apart.
+ */
+export function nearestOnLine(
+  line: LatLonTuple[],
+  cumulative: number[],
+  point: LatLon,
+  maxDistanceM = Infinity,
+): { distanceM: number; distanceAlongM: number } | null {
+  const mPerDegLat = 111_320;
+  const mPerDegLon = mPerDegLat * Math.cos((point.lat * Math.PI) / 180);
+  const padDeg = Number.isFinite(maxDistanceM) ? maxDistanceM / mPerDegLat + 0.01 : Infinity;
+  let best: { distanceM: number; distanceAlongM: number } | null = null;
+  if (line.length === 0) return null;
+  // A single-point line is treated as one zero-length segment.
+  for (let i = 0; i < Math.max(1, line.length - 1); i++) {
+    const [aLat, aLon] = line[i]!;
+    const [bLat, bLon] = line[Math.min(i + 1, line.length - 1)]!;
+    // Skip segments whose bounding box is clearly too far away.
+    if (
+      point.lat < Math.min(aLat, bLat) - padDeg ||
+      point.lat > Math.max(aLat, bLat) + padDeg ||
+      point.lon < Math.min(aLon, bLon) - padDeg * 2 ||
+      point.lon > Math.max(aLon, bLon) + padDeg * 2
+    )
+      continue;
+    const ax = (aLon - point.lon) * mPerDegLon;
+    const ay = (aLat - point.lat) * mPerDegLat;
+    const bx = (bLon - point.lon) * mPerDegLon;
+    const by = (bLat - point.lat) * mPerDegLat;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lengthSq = dx * dx + dy * dy;
+    const t = lengthSq > 0 ? Math.min(1, Math.max(0, -(ax * dx + ay * dy) / lengthSq)) : 0;
+    const distanceM = Math.hypot(ax + t * dx, ay + t * dy);
+    if (distanceM <= maxDistanceM && (!best || distanceM < best.distanceM)) {
+      const start = cumulative[i]!;
+      const end = cumulative[Math.min(i + 1, line.length - 1)]!;
+      best = { distanceM, distanceAlongM: start + t * (end - start) };
+    }
+  }
+  return best;
+}

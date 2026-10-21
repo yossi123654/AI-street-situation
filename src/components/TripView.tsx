@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CamerasAlongCard } from "@/components/CamerasAlongCard";
 import { IncidentsCard } from "@/components/IncidentsCard";
 import {
   CarIcon,
@@ -577,6 +578,9 @@ export function TripDetails({
   parkingRadiusM,
   selectedParkingId,
   onSelectParking,
+  selectedCameraId,
+  onSelectCamera,
+  aiEnabled,
 }: {
   report: TripReport | undefined;
   stops: Section<TripStop[]> | undefined;
@@ -586,11 +590,21 @@ export function TripDetails({
   parkingRadiusM: number;
   selectedParkingId: string | null;
   onSelectParking: (id: string) => void;
+  selectedCameraId: string | null;
+  onSelectCamera: (id: string) => void;
+  aiEnabled: boolean;
 }) {
   const { t } = useI18n();
   const totalM = report?.route.status === "ok" ? report.route.data.distanceM : 0;
   return (
     <>
+      <CamerasAlongCard
+        section={report?.cameras}
+        departureIsNow={report?.departureIsNow ?? true}
+        selectedId={selectedCameraId}
+        onSelect={onSelectCamera}
+        aiEnabled={aiEnabled}
+      />
       <WeatherAlongCard section={report?.weatherAlong} />
       <TrafficAlongCard section={report?.trafficAlong} totalM={totalM} />
       <IncidentsCard section={report?.incidents} along />

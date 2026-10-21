@@ -77,6 +77,15 @@ const schema = z.object({
   CAMERA_SEARCH_RADIUS_M: int(3000, 100, 50000),
   TFL_APP_KEY: optionalString,
   TFL_API_URL: url("https://api.tfl.gov.uk"),
+  /** Finnish road weather cameras (Fintraffic Digitraffic, CC BY 4.0, no key). */
+  DIGITRAFFIC_CAMERAS_ENABLED: bool(true),
+  DIGITRAFFIC_URL: url("https://tie.digitraffic.fi"),
+  /** Singapore LTA traffic cameras via data.gov.sg (Singapore Open Data Licence, no key). */
+  SG_TRAFFIC_CAMERAS_ENABLED: bool(true),
+  SG_TRAFFIC_IMAGES_URL: url("https://api.data.gov.sg"),
+  /** Hong Kong Transport Department snapshots (DATA.GOV.HK terms include an indemnity; opt-in). */
+  HK_TRAFFIC_CAMERAS_ENABLED: bool(false),
+  HK_TRAFFIC_CAMERAS_URL: url("https://static.data.gov.hk"),
   /** Testing only: allow http:// and private hosts for camera media. Never enable in production. */
   DEV_ALLOW_INSECURE_MEDIA: bool(false),
 
