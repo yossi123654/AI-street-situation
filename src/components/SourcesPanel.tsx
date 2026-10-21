@@ -3,16 +3,15 @@
 import { InfoIcon } from "@/components/icons";
 import { Card, cx } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
-import type { AiSummary, ProviderStatus, SituationReport, SourceInfo } from "@/lib/types";
+import type { AiSummary, ProviderStatus, Section, SourceInfo } from "@/lib/types";
 
 function collectSources(
-  report: SituationReport | undefined,
+  sections: Array<Section<unknown> | undefined>,
   summary: AiSummary | undefined,
 ): SourceInfo[] {
-  if (!report) return [];
   const all: SourceInfo[] = [];
-  for (const section of [report.weather, report.traffic, report.incidents, report.cameras]) {
-    if (section.status === "ok") all.push(...section.sources);
+  for (const section of sections) {
+    if (section?.status === "ok") all.push(...section.sources);
   }
   if (summary) {
     all.push({
@@ -28,16 +27,18 @@ function collectSources(
 }
 
 export function SourcesPanel({
-  report,
+  sections,
   providers,
   summary,
 }: {
-  report: SituationReport | undefined;
+  /** Every data section currently on screen; their sources are listed with attribution. */
+  sections: Array<Section<unknown> | undefined>;
   providers: ProviderStatus[];
   summary: AiSummary | undefined;
 }) {
   const { t, formatRelative } = useI18n();
-  const sources = collectSources(report, summary);
+  const sources = collectSources(sections, summary);
+  const geocoder = providers.find((p) => p.kind === "geocoding" && p.active);
   return (
     <Card id="sources" title={t("sources.title")} icon={<InfoIcon />}>
       {sources.length > 0 ? (
@@ -67,6 +68,21 @@ export function SourcesPanel({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {geocoder ? (
+        <p className="mb-3 text-sm" data-testid="geocoder-credit">
+          <span className="text-slate-500">{t("sources.geocoding")}: </span>
+          <a
+            href={geocoder.homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline-offset-2 hover:underline"
+          >
+            {geocoder.name}
+          </a>{" "}
+          <span className="text-slate-600 dark:text-slate-400">{geocoder.attribution}</span>
+        </p>
       ) : null}
 
       <details className="group text-sm">
@@ -105,7 +121,17 @@ export function SourcesPanel({
           ))}
         </ul>
       </details>
-      <p className="mt-3 text-xs text-slate-500">{t("sources.privacy")}</p>
+      <p className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
+        <span>{t("sources.privacy")}</span>
+        <a
+          href="https://www.openstreetmap.org/fixthemap"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-brand-700"
+        >
+          {t("sources.reportMapIssue")}
+        </a>
+      </p>
     </Card>
   );
 }

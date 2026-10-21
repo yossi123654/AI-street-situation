@@ -36,7 +36,10 @@
 }
 
 .camera-marker,
-.place-marker {
+.parking-marker,
+.place-marker,
+.stop-marker,
+.weather-marker {
   background: transparent;
   border: none;
 }

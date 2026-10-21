@@ -4,27 +4,51 @@ import { AppError, badRequest } from "@/lib/errors";
 import { isValidLatLon } from "@/lib/geo";
 import { UpstreamError } from "@/lib/http";
 import { RateLimiter } from "@/lib/rateLimit";
+import { ThrottleBusyError } from "@/lib/throttle";
 import type { ApiError, LatLon, Locale } from "@/lib/types";
 
-const globalForLimiter = globalThis as unknown as { __streetLimiter?: RateLimiter };
+const globalForLimiter = globalThis as unknown as {
+  __streetLimiter?: RateLimiter;
+  __streetGlobalLimiter?: RateLimiter;
+};
 
 function limiter(): RateLimiter {
   globalForLimiter.__streetLimiter ??= new RateLimiter(getConfig().RATE_LIMIT_PER_MINUTE);
   return globalForLimiter.__streetLimiter;
 }
 
+function globalLimiter(): RateLimiter {
+  globalForLimiter.__streetGlobalLimiter ??= new RateLimiter(
+    getConfig().GLOBAL_RATE_LIMIT_PER_MINUTE,
+  );
+  return globalForLimiter.__streetGlobalLimiter;
+}
+
 /**
- * Identifies the client for rate limiting. Forwarded headers are only trusted
- * when TRUST_PROXY=true (i.e. the app runs behind a reverse proxy that sets
- * them); otherwise all clients share one bucket per user agent.
+ * Identifies the client for rate limiting.
+ *
+ * Next.js sets X-Forwarded-For to the socket address only when the request
+ * has none, and passes a client-supplied value through unchanged. So:
+ * - TRUST_PROXY=true (behind a reverse proxy that sets X-Real-IP or appends
+ *   to X-Forwarded-For): use X-Real-IP, else the LAST X-Forwarded-For entry,
+ *   which is the one the proxy added. The first entry is client-controlled.
+ * - TRUST_PROXY=false: use X-Forwarded-For as Next.js provides it. Honest
+ *   clients get a per-IP bucket; a client that forges the header can dodge
+ *   its own bucket, which is why there is also a global limit.
  */
-function clientKey(request: NextRequest): string {
-  if (getConfig().TRUST_PROXY) {
-    const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-    const real = request.headers.get("x-real-ip")?.trim();
-    if (forwarded || real) return `ip:${forwarded || real}`;
+export function clientKey(headers: Headers, trustProxy: boolean): string {
+  const forwarded = headers
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (trustProxy) {
+    const real = headers.get("x-real-ip")?.trim();
+    const last = forwarded?.[forwarded.length - 1];
+    if (real || last) return `ip:${real || last}`;
   }
-  return `ua:${request.headers.get("user-agent") ?? "unknown"}`;
+  const first = forwarded?.[0];
+  return first ? `ip:${first}` : `ua:${headers.get("user-agent") ?? "unknown"}`;
 }
 
 export function errorResponse(
@@ -45,8 +69,12 @@ export function apiHandler<C = unknown>(
 ): Handler<C> {
   return async (request, context) => {
     const cost = options.cost ?? 1;
-    let result = limiter().check(clientKey(request));
-    for (let i = 1; i < cost && result.allowed; i++) result = limiter().check(clientKey(request));
+    const key = clientKey(request.headers, getConfig().TRUST_PROXY);
+    let result = limiter().check(key);
+    for (let i = 1; i < cost && result.allowed; i++) result = limiter().check(key);
+    if (result.allowed) {
+      for (let i = 0; i < cost && result.allowed; i++) result = globalLimiter().check("all");
+    }
     if (!result.allowed) {
       const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
       return errorResponse("rate_limited", "Too many requests, please slow down.", 429, {
@@ -57,6 +85,11 @@ export function apiHandler<C = unknown>(
       return await handler(request, context);
     } catch (error) {
       if (error instanceof AppError) return errorResponse(error.code, error.message, error.status);
+      if (error instanceof ThrottleBusyError) {
+        return errorResponse("busy", "The service is busy, please try again in a moment.", 503, {
+          "Retry-After": "5",
+        });
+      }
       if (error instanceof UpstreamError) {
         console.warn(`[api] upstream error: ${error.message}`);
         return errorResponse("upstream_error", "An upstream data source is unavailable.", 502);
@@ -98,4 +131,34 @@ export function json<T>(data: T, init?: { maxAge?: number; status?: number }) {
 export function parseCameraId(id: string): string {
   if (!/^[a-z]{2}-[a-z0-9-]{1,100}$/.test(id)) throw badRequest("invalid camera id");
   return id;
+}
+
+/** Parses "lat,lon" query values (with an optional `<name>Label`) for trip endpoints. */
+export function parseEndpoint(params: URLSearchParams, name: string): LatLon & { label?: string } {
+  const raw = params.get(name);
+  const match = raw?.trim().match(/^(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/);
+  if (!match) throw badRequest(`${name} must be "lat,lon"`);
+  const lat = Number(match[1]);
+  const lon = Number(match[2]);
+  if (!isValidLatLon(lat, lon)) throw badRequest(`${name} must be valid coordinates`);
+  const label = parseLabel(params.get(`${name}Label`));
+  return { lat, lon, ...(label ? { label } : {}) };
+}
+
+/** Furthest departure the trip planner accepts (forecasts get unreliable beyond a week). */
+export const MAX_DEPARTURE_AHEAD_MS = 7 * 24 * 60 * 60_000;
+
+/**
+ * Parses `depart`: missing or "now" means now; otherwise an ISO 8601 time
+ * between 5 minutes ago and 7 days ahead.
+ */
+export function parseDeparture(params: URLSearchParams, now = Date.now()): Date | undefined {
+  const raw = params.get("depart")?.trim();
+  if (!raw || raw === "now") return undefined;
+  const time = Date.parse(raw);
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(raw) || Number.isNaN(time))
+    throw badRequest('depart must be an ISO 8601 time or "now"');
+  if (time < now - 5 * 60_000) throw badRequest("depart must not be in the past");
+  if (time > now + MAX_DEPARTURE_AHEAD_MS) throw badRequest("depart must be within 7 days");
+  return new Date(time);
 }

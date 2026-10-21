@@ -13,6 +13,10 @@ export default async function HomePage() {
   const config = getConfig();
   // Map settings are read at runtime so a Docker image can be reconfigured without rebuilding.
   const map: MapConfig = {
+    vector:
+      config.MAP_TYPE === "vector"
+        ? { styleUrl: config.MAP_STYLE_URL, attribution: config.MAP_STYLE_ATTRIBUTION }
+        : null,
     tileUrl: config.MAP_TILE_URL,
     attribution: config.MAP_ATTRIBUTION,
     maxZoom: config.MAP_MAX_ZOOM,
@@ -25,6 +29,7 @@ export default async function HomePage() {
       map={map}
       providers={getProviderStatuses()}
       cameraRadiusM={config.CAMERA_SEARCH_RADIUS_M}
+      parkingRadiusM={config.PARKING_SEARCH_RADIUS_M}
     />
   );
 }

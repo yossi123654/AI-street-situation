@@ -90,7 +90,11 @@ export const tflJamCams: ProviderDefinition<"cameras"> = {
         }
         return cache.cameras;
       },
-      allowedMediaHosts: () => ["s3-eu-west-1.amazonaws.com", "jamcams.tfl.gov.uk"],
+      // TfL's bucket only: the S3 host alone would admit any bucket on it.
+      allowedMediaHosts: () => [
+        "s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/",
+        "jamcams.tfl.gov.uk",
+      ],
     };
   },
 };

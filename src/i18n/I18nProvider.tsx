@@ -13,6 +13,7 @@ interface I18nValue {
   formatRelative: (iso: string | undefined, now?: number) => string;
   formatTime: (iso: string) => string;
   formatDuration: (seconds: number) => string;
+  formatClock: (iso: string) => string;
 }
 
 const I18nContext = createContext<I18nValue | null>(null);
@@ -51,10 +52,20 @@ export function I18nProvider({ locale, children }: { locale: Locale; children: R
           day: "numeric",
           month: "short",
         }).format(new Date(iso)),
-      formatDuration: (seconds) =>
-        seconds >= 60
+      formatDuration: (seconds) => {
+        if (seconds >= 3600) {
+          const h = Math.floor(seconds / 3600);
+          const m = Math.round((seconds % 3600) / 60);
+          return t("units.hours", { h: formatNumber(h), m: formatNumber(m) });
+        }
+        return seconds >= 60
           ? t("units.minutes", { value: formatNumber(Math.round(seconds / 60)) })
-          : t("units.seconds", { value: formatNumber(seconds) }),
+          : t("units.seconds", { value: formatNumber(seconds) });
+      },
+      formatClock: (iso) =>
+        new Intl.DateTimeFormat(intlLocale, { hour: "2-digit", minute: "2-digit" }).format(
+          new Date(iso),
+        ),
     };
   }, [locale, dir, t]);
 

@@ -4,7 +4,7 @@ import { SparkIcon } from "@/components/icons";
 import { Card, CardSkeleton, Notice, Spinner, cx } from "@/components/ui";
 import { useI18n } from "@/i18n/I18nProvider";
 import { describeWeatherCode } from "@/lib/weatherCodes";
-import type { AiSummary, Confidence, SituationReport } from "@/lib/types";
+import type { AiSummary, Confidence, ParkingFacility, Section, SituationReport } from "@/lib/types";
 
 export type SummaryState =
   | { status: "idle" }
@@ -20,7 +20,11 @@ const CONFIDENCE_STYLE: Record<Confidence, string> = {
 };
 
 /** Deterministic one-line facts, shown with or without AI. */
-function useOverview(report: SituationReport) {
+function useOverview(
+  report: SituationReport,
+  parking: Section<ParkingFacility[]> | undefined,
+  parkingRadiusM: number,
+) {
   const { t, formatNumber, formatDistance } = useI18n();
   const lines: string[] = [];
   const w = report.weather;
@@ -50,16 +54,24 @@ function useOverview(report: SituationReport) {
       `${t("cameras.overview", { count: cams.data.length })} · ${formatDistance(cams.data[0]!.distanceM)}`,
     );
   }
+  if (parking?.status === "ok") {
+    lines.push(
+      t("parking.overview", { count: parking.data.length, radius: formatDistance(parkingRadiusM) }),
+    );
+  }
   return lines;
 }
 
 export function SummaryCard({
   report,
   summary,
+  parking,
+  parkingRadiusM,
 }: {
   report: SituationReport | undefined;
   summary: SummaryState;
-  cameraRadiusM: number;
+  parking: Section<ParkingFacility[]> | undefined;
+  parkingRadiusM: number;
 }) {
   const { t } = useI18n();
   return (
@@ -82,14 +94,33 @@ export function SummaryCard({
       }
       className="border-brand-100 bg-gradient-to-b from-brand-50/60 to-white dark:border-slate-800 dark:from-slate-900 dark:to-slate-900"
     >
-      {!report ? <CardSkeleton /> : <SummaryBody report={report} summary={summary} />}
+      {!report ? (
+        <CardSkeleton />
+      ) : (
+        <SummaryBody
+          report={report}
+          summary={summary}
+          parking={parking}
+          parkingRadiusM={parkingRadiusM}
+        />
+      )}
     </Card>
   );
 }
 
-function SummaryBody({ report, summary }: { report: SituationReport; summary: SummaryState }) {
+function SummaryBody({
+  report,
+  summary,
+  parking,
+  parkingRadiusM,
+}: {
+  report: SituationReport;
+  summary: SummaryState;
+  parking: Section<ParkingFacility[]> | undefined;
+  parkingRadiusM: number;
+}) {
   const { t } = useI18n();
-  const overview = useOverview(report);
+  const overview = useOverview(report, parking, parkingRadiusM);
   return (
     <div className="space-y-4">
       <div data-testid="ai-summary">

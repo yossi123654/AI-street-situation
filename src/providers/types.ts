@@ -4,7 +4,11 @@ import type {
   Incident,
   LatLon,
   Locale,
+  ParkingFacility,
   Place,
+  Route,
+  TravelMode,
+  TripStop,
   ProviderKind,
   TrafficFlow,
   WeatherData,
@@ -23,6 +27,43 @@ export interface GeocodingProvider {
 
 export interface WeatherProvider {
   current(point: LatLon): Promise<WeatherData>;
+  /**
+   * Weather at several points, each for a given time (now or a few hours
+   * ahead). Optional: providers without forecasts can omit it.
+   */
+  forecastAt?(points: Array<LatLon & { at: Date }>): Promise<PointForecast[]>;
+}
+
+export interface PointForecast {
+  temperatureC: number | null;
+  weatherCode: number | null;
+  precipitationMm: number | null;
+  windSpeedKmh: number | null;
+  visibilityM: number | null;
+  isDay: boolean | null;
+  /** The time the values are valid for (ISO). */
+  validAt: string;
+  kind: "current" | "forecast";
+}
+
+export interface StopsProvider {
+  /** Fuel stations, rest areas and similar within `radiusM` of the polyline ([lat, lon] pairs). */
+  stopsAlong(line: Array<[number, number]>, radiusM: number): Promise<TripStop[]>;
+}
+
+export interface RouteOptions {
+  /** Leave at this time instead of now. Routers with traffic models use it to predict traffic. */
+  departAt?: Date;
+}
+
+export interface RoutingProvider {
+  route(
+    from: LatLon,
+    to: LatLon,
+    mode: TravelMode,
+    locale: Locale,
+    options?: RouteOptions,
+  ): Promise<Route>;
 }
 
 export interface TrafficProvider {
@@ -34,12 +75,18 @@ export interface IncidentsProvider {
   incidents(point: LatLon, radiusM: number, locale: Locale): Promise<Incident[]>;
 }
 
+export interface ParkingProvider {
+  /** Parking facilities within `radiusM` of the point, with distanceM set. */
+  parking(point: LatLon, radiusM: number): Promise<ParkingFacility[]>;
+}
+
 export interface CameraProvider {
   /** All cameras known to this provider. Implementations may cache internally. */
   list(): Promise<Camera[]>;
   /**
-   * Hostnames this provider's media URLs may point to. The image proxy only
-   * fetches from these (in addition to the exact URL in the registry).
+   * Where this provider's media may be served from: hostnames, or
+   * "host/path/prefix" entries for shared hosts such as S3. The image proxy
+   * refuses anything else.
    */
   allowedMediaHosts?(): string[];
 }
@@ -66,6 +113,9 @@ export interface ProviderKindMap {
   traffic: TrafficProvider;
   incidents: IncidentsProvider;
   cameras: CameraProvider;
+  parking: ParkingProvider;
+  routing: RoutingProvider;
+  stops: StopsProvider;
   ai: AiProvider;
 }
 
@@ -79,6 +129,11 @@ export interface ProviderDefinition<K extends ProviderKind = ProviderKind> {
   attribution: string;
   /** Environment variables this provider needs (documentation + status page). */
   requiredEnv: string[];
+  /**
+   * For kinds that merge several providers (cameras, incidents): only the
+   * first enabled provider of the same group is used, e.g. TomTom *or* HERE.
+   */
+  group?: string;
   /** True when the configuration needed by this provider is present. */
   isEnabled(config: AppConfig): boolean;
   create(config: AppConfig): ProviderKindMap[K];

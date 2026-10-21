@@ -160,7 +160,14 @@ export function SearchBar({
                   }}
                 >
                   <PinIcon className="mt-0.5 shrink-0 text-brand-600" />
-                  <span className="text-sm">{place.label}</span>
+                  <span className="min-w-0">
+                    <span className="block text-sm">{place.label}</span>
+                    {place.fullLabel ? (
+                      <span className="block truncate text-xs text-slate-500">
+                        {place.fullLabel}
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
               </li>
             ))}

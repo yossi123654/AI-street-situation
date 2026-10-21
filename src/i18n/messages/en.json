@@ -27,11 +27,14 @@
     "hint": "Click anywhere on the map to choose a location.",
     "selected": "Selected location",
     "cameraEmbed": "Camera (image available)",
-    "cameraLink": "Camera (external link only)"
+    "cameraLink": "Camera (external link only)",
+    "parking": "Parking"
   },
   "empty": {
     "title": "Choose a place to get a situation report",
-    "body": "Search for a street or address, or click on the map. You will see traffic, incidents and weather from the configured sources, plus nearby public cameras where their terms allow it."
+    "body": "Search for a street or address, or click on the map. You will see traffic, incidents and weather from the configured sources, plus nearby public cameras where their terms allow it.",
+    "tripTitle": "Plan a trip to see the road ahead",
+    "tripBody": "Enter where you are leaving from and where you are going. You will get the route and travel time, traffic and incidents on the way, the weather along the route for when you will be there, places to stop, and parking at the destination."
   },
   "report": {
     "loading": "Collecting data from sources…",
@@ -66,7 +69,8 @@
     "notConfigured": "No data from this source: no provider is configured.",
     "notConfiguredHint": "Self-hosters can enable one in .env (see the README).",
     "error": "The data source is unavailable right now.",
-    "noData": "The provider returned no data for this location."
+    "noData": "The provider returned no data for this location.",
+    "notLive": "Live traffic is only shown for trips leaving now."
   },
   "summary": {
     "title": "Summary",
@@ -204,7 +208,9 @@
     "enabled": "Enabled",
     "disabled": "Not configured",
     "requires": "Requires: {env}",
-    "privacy": "No accounts, no tracking, no analytics. Camera images are never stored."
+    "privacy": "No accounts, no tracking, no analytics. Camera images are never stored.",
+    "geocoding": "Address search",
+    "reportMapIssue": "Report a map issue"
   },
   "time": {
     "justNow": "just now"
@@ -215,6 +221,163 @@
     "minutes": "{value} min",
     "seconds": "{value} s",
     "kmh": "{value} km/h",
-    "mm": "{value} mm"
+    "mm": "{value} mm",
+    "hours": "{h} h {m} min"
+  },
+  "parking": {
+    "title": "Parking",
+    "loading": "Looking for parking nearby…",
+    "none": "No public parking found within {radius} in OpenStreetMap.",
+    "count": "{count} parking facilities within {radius}",
+    "noOccupancy": "No live occupancy data: OpenStreetMap describes where parking is, its size and fees, not how full it is right now.",
+    "unnamed": "Unnamed parking",
+    "overview": "Parking: {count} within {radius}",
+    "capacity": "{count} spaces",
+    "disabled": "{count} accessible",
+    "hours": "Hours: {hours}",
+    "maxStay": "Max stay: {value}",
+    "parkRide": "Park & Ride",
+    "operator": "Operator: {name}",
+    "navigate": "Navigate",
+    "filteredNone": "No parking matches these filters.",
+    "kind": {
+      "surface": "Surface lot",
+      "underground": "Underground",
+      "multi-storey": "Multi-storey",
+      "street-side": "Street parking",
+      "rooftop": "Rooftop",
+      "unknown": "Parking"
+    },
+    "fee": {
+      "yes": "Paid",
+      "no": "Free",
+      "unknown": "Fee unknown"
+    },
+    "access": {
+      "public": "Public",
+      "customers": "Customers only",
+      "unknown": "Access unknown"
+    },
+    "filter": {
+      "label": "Filter parking",
+      "all": "All",
+      "free": "Free only",
+      "public": "Public only"
+    },
+    "freeNow": "{count} free now"
+  },
+  "mode": {
+    "label": "What do you want to see?",
+    "place": "A place",
+    "trip": "A trip"
+  },
+  "trip": {
+    "from": "From",
+    "to": "To",
+    "fromPlaceholder": "Starting point, e.g. Jerusalem",
+    "toPlaceholder": "Destination, e.g. Tel Aviv",
+    "swap": "Swap origin and destination",
+    "submit": "Plan trip",
+    "planning": "Planning…",
+    "fillBoth": "Enter both a starting point and a destination.",
+    "samePlace": "The starting point and the destination are the same place.",
+    "chooseFor": "Several places match “{query}”. Choose one:",
+    "noResultsFor": "No places found for “{query}”.",
+    "loading": "Planning the route and collecting data along the way…",
+    "error": "Could not plan this trip. Please try again.",
+    "tooFar": "This trip is longer than the server allows.",
+    "title": "{from} → {to}",
+    "overview": "Trip overview",
+    "distance": "Distance",
+    "duration": "Travel time",
+    "eta": "Arrival",
+    "departNow": "Leaving now",
+    "withTraffic": "Includes live traffic",
+    "withoutTraffic": "Free-flow estimate: no live traffic data (add a TomTom key for traffic-aware times)",
+    "delay": "{minutes} min delay due to traffic",
+    "noDelay": "No significant traffic delay",
+    "via": "Via",
+    "routeBy": "Route by {provider}",
+    "weatherTitle": "Weather along the way",
+    "weatherHint": "For the time you are expected at each point. Values marked “forecast” are from the hourly forecast.",
+    "atKm": "km {km}",
+    "afterMinutes": "+{minutes} min",
+    "forecast": "forecast",
+    "current": "now",
+    "trafficTitle": "Traffic on the way",
+    "trafficSections": "{count} slow sections, {minutes} min of delay in total",
+    "trafficClear": "No slow sections reported along the route.",
+    "trafficSampled": "Flow sampled at {count} points along the route.",
+    "sectionAt": "At km {km} for {length}",
+    "effectiveSpeed": "{speed} km/h",
+    "category": {
+      "jam": "Traffic jam",
+      "roadworks": "Road works",
+      "closure": "Road closure",
+      "other": "Slow traffic"
+    },
+    "incidentsTitle": "Incidents on the way",
+    "incidentsNone": "No active incidents reported along the route.",
+    "incidentsCount": "{count} incidents within 1 km of the route",
+    "alongAt": "at km {km}",
+    "stopsTitle": "Places to stop",
+    "stopsLoading": "Looking for fuel stations and rest areas along the route…",
+    "stopsNone": "No fuel stations or rest areas found within 400 m of the route in OpenStreetMap.",
+    "stopsCount": "{count} along the route",
+    "detour": "{distance} off the route",
+    "stopKind": {
+      "fuel": "Fuel",
+      "charging": "EV charging",
+      "rest_area": "Rest area",
+      "services": "Services"
+    },
+    "facility": {
+      "toilets": "toilets",
+      "shop": "shop",
+      "cafe": "café",
+      "restaurant": "restaurant",
+      "car_wash": "car wash",
+      "compressed_air": "air",
+      "charging": "EV charging"
+    },
+    "stopsFilter": {
+      "label": "Filter stops",
+      "all": "All",
+      "fuel": "Fuel",
+      "rest": "Rest areas"
+    },
+    "parkingTitle": "Parking at the destination",
+    "summaryTitle": "Trip briefing",
+    "generating": "Writing a trip briefing from the collected data…",
+    "glance": {
+      "route": "{distance} · {duration}",
+      "weather": "Weather: {min}° to {max}°",
+      "stops": "Stops: {count} on the way"
+    },
+    "missing": {
+      "route": "No route",
+      "weather": "No weather along the route",
+      "traffic": "No live traffic",
+      "incidents": "No incident data",
+      "stops": "No stops data",
+      "parking": "No parking data at the destination"
+    },
+    "examples": "Try:",
+    "example1From": "Jerusalem",
+    "example1To": "Tel Aviv",
+    "example2From": "Haifa",
+    "example2To": "Be'er Sheva",
+    "mapStart": "Start",
+    "mapEnd": "Destination",
+    "fixMap": "Fix the map",
+    "leave": "Leave",
+    "leaveNow": "Now",
+    "leaveLater": "Later",
+    "departAtLabel": "Departure time",
+    "departAt": "Leaving {time}",
+    "withPredictedTraffic": "Includes predicted traffic for that time",
+    "predictedDelay": "about {minutes} min of expected delay",
+    "departInvalid": "Choose a departure time within the next 7 days.",
+    "tooFarOrInvalid": "This trip can't be planned: check the departure time and distance."
   }
 }

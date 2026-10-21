@@ -58,6 +58,20 @@ const schema = z.object({
   TOMTOM_URL: url("https://api.tomtom.com"),
   HERE_API_KEY: optionalString,
   HERE_TRAFFIC_URL: url("https://data.traffic.hereapi.com"),
+  /** Comma-separated URLs of WZDx v4 road-work feeds published by road authorities. */
+  WZDX_FEED_URLS: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(",")
+            .map((u) => u.trim())
+            .filter(Boolean)
+        : [],
+    )
+    .pipe(z.array(z.url({ protocol: /^https?$/ }))),
 
   CAMERA_DATA_DIR: z.string().trim().default("data/cameras"),
   CAMERA_SEARCH_RADIUS_M: int(3000, 100, 50000),
@@ -65,6 +79,30 @@ const schema = z.object({
   TFL_API_URL: url("https://api.tfl.gov.uk"),
   /** Testing only: allow http:// and private hosts for camera media. Never enable in production. */
   DEV_ALLOW_INSECURE_MEDIA: bool(false),
+
+  PARKING_ENABLED: bool(true),
+  /** Overpass endpoints, tried in order (public instances are often overloaded). */
+  OVERPASS_URLS: z
+    .string()
+    .trim()
+    .default(
+      "https://maps.mail.ru/osm/tools/overpass/api/interpreter,https://overpass.private.coffee/api/interpreter,https://overpass-api.de/api/interpreter",
+    )
+    .transform((v) =>
+      v
+        .split(",")
+        .map((u) => u.trim().replace(/\/+$/, ""))
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url({ protocol: /^https?$/ })).min(1)),
+  PARKING_SEARCH_RADIUS_M: int(800, 100, 3000),
+
+  /** osrm (free, default) | tomtom (key; traffic-aware ETA). Empty = first configured, TomTom preferred. */
+  ROUTING_PROVIDER: z.enum(["osrm", "tomtom", ""]).default(""),
+  /** OSRM base URL including the profile path, e.g. https://routing.openstreetmap.de/routed-car */
+  OSRM_URL: url("https://routing.openstreetmap.de/routed-car"),
+  TRIP_MAX_DISTANCE_KM: int(500, 10, 5000),
+  TRIP_STOPS_ENABLED: bool(true),
 
   AI_PROVIDER: z.enum(["ollama", "anthropic", ""]).default(""),
   OLLAMA_URL: optionalString,
@@ -74,6 +112,15 @@ const schema = z.object({
   ANTHROPIC_URL: url("https://api.anthropic.com"),
   AI_TIMEOUT_MS: int(60000, 1000, 300000),
 
+  /** "vector" (OpenFreeMap / any MapLibre style) or "raster" (classic tile URL). */
+  MAP_TYPE: z.enum(["vector", "raster"]).default("vector"),
+  MAP_STYLE_URL: url("https://tiles.openfreemap.org/styles/liberty"),
+  MAP_STYLE_ATTRIBUTION: z
+    .string()
+    .trim()
+    .default(
+      '<a href="https://openfreemap.org" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener noreferrer">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
+    ),
   MAP_TILE_URL: z.string().trim().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   MAP_ATTRIBUTION: z
     .string()
@@ -90,6 +137,8 @@ const schema = z.object({
   MAP_DEFAULT_ZOOM: int(8, 1, 20),
 
   RATE_LIMIT_PER_MINUTE: int(60, 1, 10000),
+  /** Cap on all API requests per minute, across every client (protects upstream quotas). */
+  GLOBAL_RATE_LIMIT_PER_MINUTE: int(1200, 1, 1_000_000),
   TRUST_PROXY: bool(false),
   UPSTREAM_TIMEOUT_MS: int(10000, 500, 120000),
 });

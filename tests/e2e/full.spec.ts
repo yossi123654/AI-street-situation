@@ -10,7 +10,9 @@ test.describe("with all providers configured", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("html")).toHaveAttribute("lang", "he");
     await expect(page.getByRole("heading", { name: "בחרו מקום כדי לקבל תמונת מצב" })).toBeVisible();
-    await expect(page.locator(".leaflet-tile-loaded").first()).toBeVisible();
+    // Vector base map (MapLibre inside Leaflet) with its attribution.
+    await expect(page.locator(".leaflet-container canvas.maplibregl-canvas")).toBeVisible();
+    await expect(page.locator(".leaflet-control-attribution")).toContainText("Test vector style");
     await snap(page, "01-home");
 
     await page.getByTestId("search-input").fill("רחוב יפו ירושלים");
@@ -28,6 +30,8 @@ test.describe("with all providers configured", () => {
     // Incidents (TomTom incident details)
     await expect(page.getByTestId("incidents")).toContainText("עבודות בכביש");
     await expect(page.getByTestId("incidents")).toContainText("עבודות תשתית, נתיב אחד סגור");
+    // Open-data road works (WZDx) are merged with TomTom incidents.
+    await expect(page.getByTestId("incidents")).toContainText("Light rail track maintenance");
     // Confidence: weather + traffic + incidents all live
     await expect(page.getByTestId("confidence")).toContainText("גבוהה");
 
@@ -49,9 +53,44 @@ test.describe("with all providers configured", () => {
     // Sources and attribution
     await expect(page.getByTestId("sources")).toContainText("Open-Meteo");
     await expect(page.getByTestId("sources")).toContainText("TomTom");
+    await expect(page.getByTestId("sources")).toContainText("Example Road Authority (WZDx)");
+    await expect(page.getByTestId("geocoder-credit")).toContainText("© OpenStreetMap contributors");
     await expect(page.locator(".leaflet-control-attribution")).toContainText("OpenStreetMap");
     await snap(page, "02-report-he");
-    await snap(page, "03-report-he-full", { tall: 1750 });
+    await snap(page, "03-report-he-full", { tall: 2600 });
+  });
+
+  test("parking search: list, filters, map markers and navigation links", async ({ page }) => {
+    await page.goto("/?lat=31.7833&lon=35.2186");
+    const list = page.getByTestId("parking-list");
+    await expect(list.locator("li")).toHaveCount(5);
+    await expect(list.locator("li").first()).toContainText("חניון כלל");
+    await expect(list.locator("li").first()).toContainText("350 מקומות");
+    await expect(list.locator("li").first()).toContainText("תת-קרקעי");
+    await expect(page.getByTestId("parking")).not.toContainText("Private");
+    await expect(page.getByTestId("parking")).toContainText("אין נתוני תפוסה בזמן אמת");
+    await expect(list.locator("li").first().getByRole("link", { name: "Waze" })).toHaveAttribute(
+      "href",
+      /^https:\/\/waze\.com\/ul\?ll=31\.78\d+,35\.21\d+&navigate=yes$/,
+    );
+    await expect(page.locator(".parking-marker")).toHaveCount(5);
+
+    await page.getByRole("button", { name: "רק חינם" }).click();
+    await expect(list.locator("li")).toHaveCount(2);
+    await expect(list).toContainText("חניון הדווידקה");
+    await page.getByRole("button", { name: "רק ציבוריים" }).click();
+    await expect(list).not.toContainText("ללקוחות בלבד");
+
+    // Selecting a marker on the map highlights the facility in the list.
+    await page.getByRole("button", { name: "הכל" }).click();
+    await page.locator(".parking-marker[title='חניון ממילא']").click();
+    await expect(
+      list.locator("[data-parking-id='osm:way/103'] button[aria-pressed='true']"),
+    ).toBeVisible();
+    await expect(page.locator("#summary")).toContainText("חניה: 5 חניונים");
+    await expect(page.getByTestId("ai-summary")).toContainText("יש 5 חניונים בטווח 800");
+    await page.locator("#parking").scrollIntoViewIfNeeded();
+    await snap(page, "08-parking");
   });
 
   test("camera permissions: link-only camera is never embedded", async ({ page }) => {

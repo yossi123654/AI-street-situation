@@ -54,6 +54,7 @@ export const tomtomIncidents: ProviderDefinition<"incidents"> = {
   name: "TomTom Traffic Incidents",
   homepage: "https://developer.tomtom.com/traffic-api/documentation",
   attribution: "Incidents © TomTom",
+  group: "commercial-traffic",
   requiredEnv: ["TOMTOM_API_KEY"],
   isEnabled: (config) => Boolean(config.TOMTOM_API_KEY),
   create(config) {

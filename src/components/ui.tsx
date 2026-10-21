@@ -142,5 +142,6 @@ export function SectionUnavailable({
     );
   }
   if (section.reason === "no_data") return <Notice>{t("section.noData")}</Notice>;
+  if (section.reason === "not_live") return <Notice>{t("section.notLive")}</Notice>;
   return <Notice tone="warning">{t("section.error")}</Notice>;
 }

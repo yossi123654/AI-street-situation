@@ -32,7 +32,7 @@ function isPrivateHost(hostname: string): boolean {
  * Checks a media URL taken from the camera registry before the server fetches
  * it. This is defence in depth: the server never fetches user-supplied URLs,
  * only URLs from the registry, and this additionally rejects non-https URLs,
- * IP literals in private ranges and hosts outside an optional allowlist.
+ * IP literals in private ranges and URLs outside an optional allowlist.
  */
 export function assertSafeMediaUrl(
   raw: string,
@@ -52,13 +52,26 @@ export function assertSafeMediaUrl(
   if (url.protocol !== "https:") throw new Error("media URL must use https");
   if (url.username || url.password) throw new Error("credentials in media URL are not allowed");
   if (isPrivateHost(url.hostname)) throw new Error("media URL points to a private address");
-  const host = url.hostname.toLowerCase();
   const allowed = [
     ...(options.allowedHosts ?? []),
     ...(options.expectedHost ? [options.expectedHost] : []),
   ];
-  if (allowed.length > 0 && !allowed.some((h) => host === h || host.endsWith(`.${h}`))) {
-    throw new Error(`media host ${host} is not allowlisted`);
+  if (allowed.length > 0 && !allowed.some((entry) => matchesAllowEntry(url, entry))) {
+    throw new Error(`media URL ${url.hostname}${url.pathname} is not allowlisted`);
   }
   return url;
+}
+
+/**
+ * An allowlist entry is a hostname ("tfl.gov.uk", which also matches
+ * subdomains) or a hostname plus path prefix ("s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/"),
+ * for shared hosts such as S3 where the host alone would admit any bucket.
+ */
+function matchesAllowEntry(url: URL, entry: string): boolean {
+  const slash = entry.indexOf("/");
+  const host = (slash === -1 ? entry : entry.slice(0, slash)).toLowerCase();
+  const pathPrefix = slash === -1 ? "" : entry.slice(slash);
+  const hostname = url.hostname.toLowerCase();
+  if (pathPrefix) return hostname === host && url.pathname.startsWith(pathPrefix);
+  return hostname === host || hostname.endsWith(`.${host}`);
 }

@@ -2,8 +2,10 @@ import { CameraAvailabilityService } from "@/services/CameraAvailabilityService"
 import { CameraImageService } from "@/services/CameraImageService";
 import { CameraRegistry } from "@/services/CameraRegistry";
 import { LocationService } from "@/services/LocationService";
+import { ParkingService } from "@/services/ParkingService";
 import { SituationService } from "@/services/SituationService";
 import { SituationSummaryService } from "@/services/SituationSummaryService";
+import { TripService } from "@/services/TripService";
 import { VisionAnalyzer } from "@/services/VisionAnalyzer";
 
 /** Process-wide service singletons (the in-memory caches live inside them). */
@@ -14,8 +16,10 @@ function createServices() {
   const availability = new CameraAvailabilityService(images);
   const vision = new VisionAnalyzer(images);
   const situation = new SituationService(cameras);
-  const summary = new SituationSummaryService(situation, cameras, vision);
-  return { location, cameras, images, availability, vision, situation, summary };
+  const parking = new ParkingService();
+  const trip = new TripService(parking);
+  const summary = new SituationSummaryService(situation, cameras, vision, parking, trip, location);
+  return { location, cameras, images, availability, vision, situation, parking, trip, summary };
 }
 
 export type Services = ReturnType<typeof createServices>;

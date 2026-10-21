@@ -14,13 +14,20 @@ const SEVERITY_STYLE: Record<IncidentSeverity, string> = {
 
 const INCIDENT_RADIUS_M = 2000;
 
-export function IncidentsCard({ section }: { section: Section<Incident[]> | undefined }) {
-  const { t, formatDistance, formatTime } = useI18n();
+export function IncidentsCard({
+  section,
+  along = false,
+}: {
+  section: Section<Incident[]> | undefined;
+  /** Trip mode: distances are kilometres along the route, not distance from the point. */
+  along?: boolean;
+}) {
+  const { t, formatDistance, formatTime, formatNumber } = useI18n();
   const radius = formatDistance(INCIDENT_RADIUS_M);
   return (
     <Card
       id="incidents"
-      title={t("incidents.title")}
+      title={along ? t("trip.incidentsTitle") : t("incidents.title")}
       icon={<AlertIcon />}
       actions={
         section?.status === "ok" ? (
@@ -82,7 +89,11 @@ export function IncidentsCard({ section }: { section: Section<Incident[]> | unde
                 </div>
                 {incident.distanceM !== undefined ? (
                   <span className="shrink-0 text-xs whitespace-nowrap text-slate-500 tabular-nums">
-                    {t("incidents.away", { distance: formatDistance(incident.distanceM) })}
+                    {along
+                      ? t("trip.alongAt", {
+                          km: formatNumber(Math.round(incident.distanceM / 1000)),
+                        })
+                      : t("incidents.away", { distance: formatDistance(incident.distanceM) })}
                   </span>
                 ) : null}
               </li>

@@ -6,14 +6,19 @@ touch the rest of the app.
 
 ```
 src/providers/
-  types.ts            interfaces: GeocodingProvider, WeatherProvider,
-                      TrafficProvider, IncidentsProvider, CameraProvider, AiProvider
+  types.ts            interfaces: GeocodingProvider, WeatherProvider, TrafficProvider,
+                      IncidentsProvider, CameraProvider, ParkingProvider, RoutingProvider,
+                      StopsProvider, AiProvider
   registry.ts         ALL_PROVIDERS list, selection rules
   geocoding/          nominatim, photon, google
   weather/            openMeteo
   traffic/            tomtom, here
-  incidents/          tomtom, here
+  incidents/          tomtom, here, wzdx (open road-work feeds)
   cameras/            staticJson (community registry), tflJamCam
+  parking/            overpass (OpenStreetMap)
+  routing/            osrm (free default), tomtom (live traffic)
+  stops/              overpass (fuel, chargers, rest areas along a route)
+  overpass/           shared Overpass client with endpoint failover
   vision/             ollama, anthropic
 ```
 
@@ -80,9 +85,14 @@ from `.env.example`.
 ## 3. Register it
 
 Add the definition to `ALL_PROVIDERS` in `src/providers/registry.ts`. For
-single-provider kinds (geocoding, weather, traffic, incidents, AI) the first
+single-provider kinds (geocoding, weather, traffic, parking, routing, stops, AI) the first
 enabled provider wins unless the user picks one (`TRAFFIC_PROVIDER`,
-`AI_PROVIDER`, `GEOCODING_PROVIDER`). Camera providers are all merged.
+`AI_PROVIDER`, `GEOCODING_PROVIDER`, `ROUTING_PROVIDER`). Cameras and incidents merge every
+enabled provider. Set `group` on providers that overlap (TomTom and HERE
+incidents share the group `commercial-traffic`, so only one is used).
+
+A live parking-occupancy provider should fill `ParkingFacility.occupancy`
+with `observedAt`; the UI shows it only when present.
 
 ## 4. Test and document
 
@@ -91,3 +101,12 @@ enabled provider wins unless the user picks one (`TRAFFIC_PROVIDER`,
 - Add the source to [`docs/sources.md`](sources.md): operator, terms URL,
   attribution, limits, and whether embedding and AI analysis are allowed.
 - Add any new UI strings to **every** file in `src/i18n/messages/`.
+
+## Routing providers
+
+A `RoutingProvider` returns a `Route`: the geometry as `[lat, lon]` pairs,
+distance, duration, the major steps with their start offset, and optionally
+`cumulativeDurationS` per geometry point (used to compute when the driver
+reaches each point), `trafficSections` and `trafficDelayS`. Set
+`trafficAware: true` only when the duration really includes live traffic;
+the UI tells the user either way.

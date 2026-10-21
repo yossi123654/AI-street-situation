@@ -9,6 +9,9 @@ test("works without any API key and says clearly what is missing", async ({ page
   await page.getByTestId("search-submit").click();
 
   await expect(page.getByTestId("weather")).toContainText("23°");
+  // Raster map mode and keyless parking search.
+  await expect(page.locator(".leaflet-tile-loaded").first()).toBeVisible();
+  await expect(page.getByTestId("parking-list").locator("li")).toHaveCount(5);
   await expect(page.locator("#traffic")).toContainText("אין נתונים ממקור זה: לא הוגדר ספק.");
   await expect(page.locator("#incidents")).toContainText("אין נתונים ממקור זה: לא הוגדר ספק.");
   await expect(page.locator("#cameras")).toContainText("אין מצלמות ציבוריות מאומתות");
@@ -18,7 +21,8 @@ test("works without any API key and says clearly what is missing", async ({ page
 
   await page.locator("#sources summary").click();
   await expect(page.getByTestId("providers")).toContainText("TOMTOM_API_KEY");
-  await snap(page, "07-no-keys", { tall: 1500 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await snap(page, "07-no-keys", { tall: 2150 });
 });
 
 test("summary endpoint reports that AI is not configured", async ({ request }) => {

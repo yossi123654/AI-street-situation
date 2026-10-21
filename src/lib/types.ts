@@ -13,7 +13,10 @@ export interface LatLon {
 /** A geocoded place. */
 export interface Place extends LatLon {
   id: string;
+  /** Short, readable label, e.g. "Jaffa Street, City Centre, Jerusalem". */
   label: string;
+  /** The geocoder's full description, when it differs from the label. */
+  fullLabel?: string;
   /** Free-form place kind reported by the geocoder (street, city, ...). */
   kind?: string;
   /** [south, west, north, east] */
@@ -94,6 +97,152 @@ export interface Incident {
   source: SourceInfo;
 }
 
+export type ParkingKind =
+  "surface" | "underground" | "multi-storey" | "street-side" | "rooftop" | "unknown";
+
+export interface ParkingFacility {
+  id: string;
+  name?: string;
+  lat: number;
+  lon: number;
+  distanceM: number;
+  kind: ParkingKind;
+  capacity: number | null;
+  capacityDisabled: number | null;
+  fee: "yes" | "no" | "unknown";
+  access: "public" | "customers" | "unknown";
+  /** Raw OSM opening_hours value, e.g. "Mo-Fr 07:00-22:00". */
+  openingHours?: string;
+  operator?: string;
+  maxStay?: string;
+  parkAndRide: boolean;
+  /** Real-time occupancy. Only set by providers that publish live data. */
+  occupancy?: { free: number | null; total: number | null; observedAt: string };
+  source: SourceInfo;
+}
+
+// ── Trips ────────────────────────────────────────────────────────────────────
+
+export type TravelMode = "car";
+
+export type RouteTrafficCategory = "jam" | "roadworks" | "closure" | "other";
+
+/** A stretch of the route with degraded traffic, as reported by a traffic-aware router. */
+export interface RouteTrafficSection {
+  /** Indexes into Route.geometry. */
+  startIndex: number;
+  endIndex: number;
+  category: RouteTrafficCategory;
+  severity: IncidentSeverity;
+  effectiveSpeedKmh: number | null;
+  delayS: number;
+  /** Distance from the start of the route to the start of the section. */
+  distanceAlongM: number;
+  lengthM: number;
+}
+
+export interface RouteStep {
+  /** Road name and/or number, e.g. "כביש 1". */
+  name: string;
+  /** Distance from the start of the route to the start of this step. */
+  distanceAlongM: number;
+  distanceM: number;
+  durationS: number;
+}
+
+export interface Route {
+  /** [lat, lon] pairs. */
+  geometry: Array<[number, number]>;
+  distanceM: number;
+  /** Expected travel time. Includes traffic when `trafficAware` is true. */
+  durationS: number;
+  trafficAware: boolean;
+  /** "live" for departures now, "predicted" (historic patterns) for later departures. */
+  trafficKind?: "live" | "predicted";
+  /** Travel time without traffic, when the router reports it. */
+  noTrafficDurationS?: number;
+  trafficDelayS?: number;
+  /** Cumulative travel time at each geometry point (seconds), when available. */
+  cumulativeDurationS?: number[];
+  /** Major roads used, in order, de-duplicated. */
+  roads: string[];
+  steps: RouteStep[];
+  trafficSections?: RouteTrafficSection[];
+  source: SourceInfo;
+}
+
+/** Weather at a point of the route, for the time the traveller is expected there. */
+export interface RoutePointWeather {
+  lat: number;
+  lon: number;
+  distanceAlongM: number;
+  /** Seconds after departure when the traveller passes this point. */
+  etaOffsetS: number;
+  /** Time the forecast is for (ISO). */
+  forecastFor: string;
+  /** "current" for points reached within ~30 min, else "forecast". */
+  kind: "current" | "forecast";
+  temperatureC: number | null;
+  weatherCode: number | null;
+  precipitationMm: number | null;
+  windSpeedKmh: number | null;
+  visibilityM: number | null;
+  isDay: boolean | null;
+  /** Nearest road name from the route steps, if known. */
+  roadName?: string;
+}
+
+/** Traffic flow sampled at a point along the route (when the router is not traffic-aware). */
+export interface RouteTrafficSample {
+  lat: number;
+  lon: number;
+  distanceAlongM: number;
+  roadName?: string;
+  flow: TrafficFlow;
+}
+
+export type TripStopKind = "fuel" | "rest_area" | "services" | "charging";
+
+export type TripFacility =
+  "toilets" | "shop" | "cafe" | "restaurant" | "car_wash" | "compressed_air" | "charging";
+
+export interface TripStop {
+  id: string;
+  kind: TripStopKind;
+  name?: string;
+  brand?: string;
+  lat: number;
+  lon: number;
+  /** Distance from the start of the route to the nearest route point. */
+  distanceAlongM: number;
+  /** Straight-line distance from the route. */
+  detourM: number;
+  openingHours?: string;
+  /** Extra facilities from OSM tags. */
+  facilities: TripFacility[];
+}
+
+export interface TripReport {
+  from: LatLon & { label?: string };
+  to: LatLon & { label?: string };
+  mode: TravelMode;
+  generatedAt: string;
+  departureTime: string;
+  /** False when the user chose a later departure time. */
+  departureIsNow: boolean;
+  route: Section<Route>;
+  weatherAlong: Section<RoutePointWeather[]>;
+  /** Either the router's own traffic sections or sampled flow; `null` data when neither applies. */
+  trafficAlong: Section<{ sections: RouteTrafficSection[]; samples: RouteTrafficSample[] }>;
+  incidents: Section<Incident[]>;
+  stops: Section<TripStop[]>;
+  destinationParking: Section<ParkingFacility[]>;
+  missing: TripMissingCode[];
+  confidence: Confidence;
+}
+
+export type TripMissingCode = "route" | "weather" | "traffic" | "incidents" | "stops" | "parking";
+
 export type Permission = true | false | "unknown";
 
 export interface Camera {
@@ -136,7 +285,8 @@ export interface CameraView extends Omit<Camera, "mediaUrl"> {
   videoUrl?: string;
 }
 
-export type UnavailableReason = "not_configured" | "error" | "no_data";
+/** not_live: the data only exists for "now" (e.g. live traffic) and the user asked about later. */
+export type UnavailableReason = "not_configured" | "error" | "no_data" | "not_live";
 
 export type Section<T> =
   | { status: "ok"; data: T; freshness: Freshness; sources: SourceInfo[] }
@@ -198,11 +348,23 @@ export interface ProviderStatus {
   active: boolean;
   requiredEnv: string[];
   homepage: string;
+  attribution: string;
 }
 
-export type ProviderKind = "geocoding" | "weather" | "traffic" | "incidents" | "cameras" | "ai";
+export type ProviderKind =
+  | "geocoding"
+  | "weather"
+  | "traffic"
+  | "incidents"
+  | "cameras"
+  | "parking"
+  | "routing"
+  | "stops"
+  | "ai";
 
 export interface MapConfig {
+  /** Vector style (MapLibre) when set; the raster tiles are the fallback. */
+  vector: { styleUrl: string; attribution: string } | null;
   tileUrl: string;
   attribution: string;
   maxZoom: number;
