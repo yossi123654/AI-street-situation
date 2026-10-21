@@ -113,6 +113,15 @@ const schema = z.object({
   TRIP_MAX_DISTANCE_KM: int(500, 10, 5000),
   TRIP_STOPS_ENABLED: bool(true),
 
+  /** How far from the point to look for published photos, in metres. */
+  PHOTO_SEARCH_RADIUS_M: int(300, 50, 2000),
+  /** Panoramax: open, federated street-level imagery (CC BY-SA 4.0 and similar), no key. */
+  PANORAMAX_ENABLED: bool(true),
+  PANORAMAX_URL: url("https://api.panoramax.xyz"),
+  /** Wikimedia Commons geotagged photos (free licences, per photo), no key. */
+  WIKIMEDIA_COMMONS_ENABLED: bool(true),
+  WIKIMEDIA_COMMONS_URL: url("https://commons.wikimedia.org"),
+
   AI_PROVIDER: z.enum(["ollama", "anthropic", ""]).default(""),
   OLLAMA_URL: optionalString,
   OLLAMA_MODEL: z.string().trim().default("qwen2.5vl:7b"),

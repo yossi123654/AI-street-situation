@@ -10,11 +10,26 @@ import type { ApiError, LatLon, Locale } from "@/lib/types";
 const globalForLimiter = globalThis as unknown as {
   __streetLimiter?: RateLimiter;
   __streetGlobalLimiter?: RateLimiter;
+  __streetMediaLimiter?: RateLimiter;
 };
 
 function limiter(): RateLimiter {
   globalForLimiter.__streetLimiter ??= new RateLimiter(getConfig().RATE_LIMIT_PER_MINUTE);
   return globalForLimiter.__streetLimiter;
+}
+
+/**
+ * Image requests (photo thumbnails) get their own, larger bucket: one photo
+ * card loads up to 16 thumbnails, which would otherwise use up a visitor's
+ * whole per-minute allowance. They still count towards the global limit.
+ */
+const MEDIA_LIMIT_FACTOR = 5;
+
+function mediaLimiter(): RateLimiter {
+  globalForLimiter.__streetMediaLimiter ??= new RateLimiter(
+    getConfig().RATE_LIMIT_PER_MINUTE * MEDIA_LIMIT_FACTOR,
+  );
+  return globalForLimiter.__streetMediaLimiter;
 }
 
 function globalLimiter(): RateLimiter {
@@ -65,13 +80,14 @@ type Handler<C> = (request: NextRequest, context: C) => Promise<Response>;
 /** Wraps a route handler with rate limiting and uniform error responses. */
 export function apiHandler<C = unknown>(
   handler: Handler<C>,
-  options: { cost?: number } = {},
+  options: { cost?: number; bucket?: "api" | "media" } = {},
 ): Handler<C> {
   return async (request, context) => {
     const cost = options.cost ?? 1;
     const key = clientKey(request.headers, getConfig().TRUST_PROXY);
-    let result = limiter().check(key);
-    for (let i = 1; i < cost && result.allowed; i++) result = limiter().check(key);
+    const perClient = options.bucket === "media" ? mediaLimiter() : limiter();
+    let result = perClient.check(key);
+    for (let i = 1; i < cost && result.allowed; i++) result = perClient.check(key);
     if (result.allowed) {
       for (let i = 0; i < cost && result.allowed; i++) result = globalLimiter().check("all");
     }
@@ -130,6 +146,11 @@ export function json<T>(data: T, init?: { maxAge?: number; status?: number }) {
 /** Camera ids are generated or validated as kebab-case; anything else is rejected early. */
 export function parseCameraId(id: string): string {
   if (!/^[a-z]{2}-[a-z0-9-]{1,100}$/.test(id)) throw badRequest("invalid camera id");
+  return id;
+}
+
+export function parsePhotoId(id: string): string {
+  if (!/^[a-z]+-[a-z0-9-]{1,64}$/.test(id)) throw badRequest("invalid photo id");
   return id;
 }
 

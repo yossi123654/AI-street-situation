@@ -45,6 +45,9 @@ issue or a pull request that updates this file.
 | Camera                                  | Western Wall live stream (thekotel.org)      | Yes               | No                      | No (terms unknown)         | No          | ✅ link only      |
 | AI                                      | Ollama (local open-weight models)            | Opt-in            | No                      | n/a                        | n/a         | ✅ (runs locally) |
 | AI                                      | Anthropic API                                | Opt-in            | Yes                     | n/a                        | n/a         | ⚠️                |
+| Photos (street level)                   | Panoramax                                    | Yes               | No                      | Yes (CC BY-SA 4.0 mostly)  | No          | ✅                |
+| Photos (geotagged)                      | Wikimedia Commons                            | Yes               | No                      | Yes (licence per photo)    | No          | ✅                |
+| Photos (street level)                   | Mapillary                                    | No                | Yes                     | Logo + link required       | —           | ❌ (see below)    |
 | Cameras / incidents / parking occupancy | Israeli government and municipal sources     | No                | —                       | —                          | —           | ❌ (see below)    |
 
 ## Map
@@ -435,6 +438,57 @@ If you can document terms for any of these, add the camera with
 `"unknown"` permissions (shown as an external link only) or with explicit
 permissions backed by a link to the terms. See
 [adding-a-camera.md](adding-a-camera.md).
+
+## Photos ("what it looks like here")
+
+Published photos near the point and near a trip's destination. They are not
+live: every photo shows when it was taken. The browser gets metadata and an
+id; the server fetches the image from the URL the provider returned (the
+same SSRF-safe fetcher as camera images) and keeps it in memory only. The AI
+never sees these photos.
+
+### Panoramax (default)
+
+- API: `https://api.panoramax.xyz/api/search?bbox=…` (STAC, no key), the
+  meta-catalog of the federated Panoramax instances. Verified live on
+  2026-10-21: street-level pictures in central Jerusalem (Dec 2025), with
+  500 px thumbnails and 2048 px images served by the hosting instance (for
+  example `panoramax.openstreetmap.fr`).
+- Licence: per picture, reported in the item (`license`, plus a `license`
+  link); almost all are **CC BY-SA 4.0**, some instances use etalab-2.0.
+  We show the licence and the contributor's name with every photo.
+- Faces and licence plates are blurred by Panoramax before publication.
+- Switch off with `PANORAMAX_ENABLED=false`. Point `PANORAMAX_URL` at a
+  single instance's API if you prefer.
+- Want more coverage? Anyone can upload street-level photos to Panoramax;
+  the empty state links there.
+
+### Wikimedia Commons (default)
+
+- API: the MediaWiki Action API, `generator=geosearch` on
+  `commons.wikimedia.org` with `prop=imageinfo` (no key). Results include the
+  licence (`LicenseShortName`, `LicenseUrl`), author and date for each file.
+- Licence: chosen by each author (CC BY, CC BY-SA, public domain…). We show
+  the licence, author and a link to the file page with every photo.
+- Rate limits (2026): clients with an identifying User-Agent get 200
+  requests a minute and should keep concurrency at 3 or less. The provider
+  sends `APP_USER_AGENT`, spaces requests, and after HTTP 429 stays away for
+  two minutes. From the shared development sandbox Commons sometimes
+  answered 429; a normal server is unlikely to hit the limit, and results
+  are cached for 6 hours.
+- Images are only fetched from `upload.wikimedia.org` and
+  `thumb.wikimedia.org`.
+- Switch off with `WIKIMEDIA_COMMONS_ENABLED=false`.
+
+### Mapillary (❌ not included yet)
+
+Mapillary has the largest street-level coverage, including in Israel, and
+its imagery is CC BY-SA. It is not included because its terms
+(<https://www.mapillary.com/terms>, read 2026-10-21) require apps that show
+its images to **display the Mapillary logo** and link back to Mapillary,
+image URLs from the API expire, and commercial use is limited to specific
+purposes. A provider that meets these terms (opt-in, with an access token
+and the logo) is a welcome contribution.
 
 ## AI
 

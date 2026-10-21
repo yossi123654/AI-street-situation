@@ -7,6 +7,7 @@ import type {
   ParkingFacility,
   Place,
   Route,
+  StreetPhoto,
   TravelMode,
   TripStop,
   ProviderKind,
@@ -100,6 +101,21 @@ export interface CameraProvider {
   allowedMediaHosts?(): string[];
 }
 
+/** A photo found by a provider, with the URLs only the server ever sees. */
+export interface ProviderPhoto extends Omit<StreetPhoto, "distanceM"> {
+  /** Small image (~500–640 px wide). */
+  thumbUrl: string;
+  /** Larger image for the viewer (~1–2k px wide). */
+  largeUrl: string;
+}
+
+export interface PhotosProvider {
+  /** Photos within `radiusM` of the point (unsorted; the service sorts and thins). */
+  near(point: LatLon, radiusM: number): Promise<ProviderPhoto[]>;
+  /** Hosts the image URLs may point to; the proxy refuses anything else. Omit to allow any public https host. */
+  allowedMediaHosts?(): string[];
+}
+
 export interface AiImageInput {
   data: Buffer;
   mimeType: string;
@@ -125,6 +141,7 @@ export interface ProviderKindMap {
   parking: ParkingProvider;
   routing: RoutingProvider;
   stops: StopsProvider;
+  photos: PhotosProvider;
   ai: AiProvider;
 }
 

@@ -30,6 +30,7 @@ export default async function HomePage() {
       providers={getProviderStatuses()}
       cameraRadiusM={config.CAMERA_SEARCH_RADIUS_M}
       parkingRadiusM={config.PARKING_SEARCH_RADIUS_M}
+      photoRadiusM={config.PHOTO_SEARCH_RADIUS_M}
     />
   );
 }

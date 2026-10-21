@@ -383,6 +383,8 @@ describe("registry", () => {
       "parking:overpass",
       "routing:osrm",
       "stops:overpass-stops",
+      "photos:panoramax",
+      "photos:wikimedia-commons",
     ]);
     expect(getProvider("traffic")).toBeUndefined();
     expect(getProvider("ai")).toBeUndefined();

@@ -815,6 +815,73 @@ const server = createServer(async (req, res) => {
     });
   }
 
+  // --- Panoramax (STAC search on the meta-catalog) ---
+  if (p === "/panoramax/api/search") {
+    const origin = `http://127.0.0.1:${PORT}`;
+    const ids = [
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+      "33333333-3333-4333-8333-333333333333",
+    ];
+    return send(res, 200, {
+      type: "FeatureCollection",
+      features: ids.map((id, i) => ({
+        type: "Feature",
+        id,
+        geometry: {
+          type: "Point",
+          coordinates: [JAFFA.lon + 0.0004 * (i + 1), JAFFA.lat + 0.0002 * (i + 1)],
+        },
+        properties: {
+          datetime: `2025-0${i + 3}-14T10:00:00+00:00`,
+          license: "CC-BY-SA-4.0",
+          "view:azimuth": 90 * i,
+          "geovisio:producer": `mapper${i + 1}`,
+          "pers:interior_orientation": { field_of_view: i === 2 ? 360 : 70 },
+        },
+        assets: {
+          thumb: { href: `${origin}/photos/${id}/thumb.jpg` },
+          sd: { href: `${origin}/photos/${id}/sd.jpg` },
+        },
+        links: [{ rel: "license", href: "https://creativecommons.org/licenses/by-sa/4.0/" }],
+      })),
+    });
+  }
+
+  // --- Wikimedia Commons (geosearch generator with imageinfo) ---
+  if (p === "/commons/w/api.php") {
+    const origin = `http://127.0.0.1:${PORT}`;
+    return send(res, 200, {
+      batchcomplete: true,
+      query: {
+        pages: [
+          {
+            pageid: 4242,
+            title: "File:Jaffa Street test photo.jpg",
+            coordinates: [{ lat: JAFFA.lat + 0.0003, lon: JAFFA.lon - 0.0002 }],
+            imageinfo: [
+              {
+                thumburl: `${origin}/photos/commons-4242/640px.jpg`,
+                descriptionurl: `${origin}/pages/commons-4242`,
+                mime: "image/jpeg",
+                extmetadata: {
+                  LicenseShortName: { value: "CC BY 4.0" },
+                  LicenseUrl: { value: "https://creativecommons.org/licenses/by/4.0" },
+                  Artist: { value: "<a href='https://example.org'>Test Photographer</a>" },
+                  DateTimeOriginal: { value: "2019-05-12 10:00:00" },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+  }
+  if (p.startsWith("/photos/")) {
+    res.writeHead(200, { "Content-Type": "image/jpeg", "Cache-Control": "no-store" });
+    return res.end(cameraJpg);
+  }
+
   // --- Vector map style (MapLibre) with a synthetic street grid ---
   if (p === "/style.json") return send(res, 200, vectorStyle());
 

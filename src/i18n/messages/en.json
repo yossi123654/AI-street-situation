@@ -386,5 +386,22 @@
     "camerasAdd": "Know one? Add it to the registry",
     "cameraIn": "in {time}",
     "cameraAtStart": "at the start"
+  },
+  "photos": {
+    "title": "What it looks like here",
+    "destinationTitle": "What the destination looks like",
+    "none": "No published photos within {radius} yet.",
+    "contribute": "Add street photos on Panoramax",
+    "street": "Street level",
+    "photo": "Photo",
+    "panorama": "360°",
+    "taken": "Taken {date}",
+    "dateUnknown": "Date unknown",
+    "away": "{distance} away",
+    "onPanoramax": "View on Panoramax",
+    "onCommons": "View on Wikimedia Commons",
+    "notLive": "These photos are not live: each shows the place when it was taken. Faces and licence plates in street-level imagery are blurred by Panoramax.",
+    "imageError": "This photo could not be loaded right now.",
+    "alt": "Photo of the place"
   }
 }

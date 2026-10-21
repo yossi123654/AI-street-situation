@@ -14,6 +14,8 @@ const fullEnv = {
   OVERPASS_URLS: `${MOCK}/overpass/api/interpreter`,
   OLLAMA_URL: `${MOCK}/ollama`,
   CAMERA_DATA_DIR: "tests/fixtures/cameras",
+  PANORAMAX_URL: `${MOCK}/panoramax`,
+  WIKIMEDIA_COMMONS_URL: `${MOCK}/commons`,
   // Open camera feeds only answer searches in their own country; keep them offline anyway.
   DIGITRAFFIC_URL: `${MOCK}/digitraffic`,
   SG_TRAFFIC_IMAGES_URL: `${MOCK}/data-gov-sg`,
@@ -33,6 +35,9 @@ const minimalEnv = {
   OPEN_METEO_URL: `${MOCK}/open-meteo`,
   OSRM_URL: `${MOCK}/osrm/routed-car`,
   CAMERA_DATA_DIR: "tests/fixtures/empty-cameras",
+  // Photo sources serve images over http from the mock, which only the full server allows.
+  PANORAMAX_ENABLED: "false",
+  WIKIMEDIA_COMMONS_ENABLED: "false",
   // Open camera feeds only answer searches in their own country; keep them offline anyway.
   DIGITRAFFIC_URL: `${MOCK}/digitraffic`,
   SG_TRAFFIC_IMAGES_URL: `${MOCK}/data-gov-sg`,

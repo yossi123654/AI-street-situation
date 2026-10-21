@@ -364,6 +364,32 @@ export interface ProviderStatus {
   attribution: string;
 }
 
+/**
+ * A published photo of a place: street-level imagery (Panoramax) or a
+ * geotagged photo (Wikimedia Commons). Not live: `capturedAt` says when it
+ * was taken. Image bytes are served through /api/photos/:id/image only.
+ */
+export interface StreetPhoto {
+  /** "<provider>-<source id>", e.g. "panoramax-93a6d34d-...". */
+  id: string;
+  providerId: string;
+  /** street: street-level imagery; photo: a photo of the place or a landmark. */
+  kind: "street" | "photo";
+  lat: number;
+  lon: number;
+  distanceM: number;
+  capturedAt?: string;
+  /** Direction the camera faced, degrees from north. */
+  headingDeg?: number;
+  /** True for 360° panoramas (the thumbnail is the flattened panorama). */
+  panorama?: boolean;
+  title?: string;
+  author?: string;
+  license: { name: string; url?: string };
+  /** The photo's page at the source, for credit and the full-size view. */
+  pageUrl: string;
+}
+
 export type ProviderKind =
   | "geocoding"
   | "weather"
@@ -373,6 +399,7 @@ export type ProviderKind =
   | "parking"
   | "routing"
   | "stops"
+  | "photos"
   | "ai";
 
 export interface MapConfig {

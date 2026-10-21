@@ -2,6 +2,7 @@ import { CameraAvailabilityService } from "@/services/CameraAvailabilityService"
 import { CameraImageService } from "@/services/CameraImageService";
 import { CameraRegistry } from "@/services/CameraRegistry";
 import { LocationService } from "@/services/LocationService";
+import { PhotoService } from "@/services/PhotoService";
 import { ParkingService } from "@/services/ParkingService";
 import { SituationService } from "@/services/SituationService";
 import { SituationSummaryService } from "@/services/SituationSummaryService";
@@ -18,8 +19,20 @@ function createServices() {
   const situation = new SituationService(cameras);
   const parking = new ParkingService();
   const trip = new TripService(parking, cameras);
+  const photos = new PhotoService();
   const summary = new SituationSummaryService(situation, cameras, vision, parking, trip, location);
-  return { location, cameras, images, availability, vision, situation, parking, trip, summary };
+  return {
+    location,
+    cameras,
+    images,
+    availability,
+    vision,
+    situation,
+    parking,
+    trip,
+    photos,
+    summary,
+  };
 }
 
 export type Services = ReturnType<typeof createServices>;
