@@ -6,6 +6,7 @@ import { CamerasCard } from "@/components/CamerasCard";
 import { Header } from "@/components/Header";
 import { IncidentsCard } from "@/components/IncidentsCard";
 import { ParkingCard } from "@/components/ParkingCard";
+import { PhotosCard } from "@/components/PhotosCard";
 import { CodeIcon, PinIcon, RefreshIcon, RouteIcon } from "@/components/icons";
 import { SearchBar } from "@/components/SearchBar";
 import { SourcesPanel } from "@/components/SourcesPanel";
@@ -13,6 +14,7 @@ import { SummaryCard, type SummaryState } from "@/components/SummaryCard";
 import { TrafficCard } from "@/components/TrafficCard";
 import { TripSearch, type TripEndpoint } from "@/components/TripSearch";
 import { TripDetails, TripOverviewCard } from "@/components/TripView";
+import { usePhotos } from "@/components/usePhotos";
 import { Notice, Skeleton, Spinner, cx } from "@/components/ui";
 import { useTripData, type TripSelection } from "@/components/useTripData";
 import { WeatherCard } from "@/components/WeatherCard";
@@ -59,6 +61,7 @@ interface Props {
   providers: ProviderStatus[];
   cameraRadiusM: number;
   parkingRadiusM: number;
+  photoRadiusM: number;
 }
 
 export function StreetSituationApp(props: Props) {
@@ -120,7 +123,7 @@ function writeTripToUrl(trip: TripSelection) {
   window.history.replaceState(null, "", `?${params.toString()}`);
 }
 
-function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
+function AppInner({ map, providers, cameraRadiusM, parkingRadiusM, photoRadiusM }: Props) {
   const { t, locale, formatRelative } = useI18n();
   const [mode, setMode] = useState<Mode>("place");
   const [place, setPlace] = useState<SelectedPlace | null>(null);
@@ -308,6 +311,13 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
     tripReport?.destinationParking.status === "ok"
       ? tripReport.destinationParking.data
       : NO_PARKING;
+  // Photos of the selected place, or of the trip's destination.
+  const photoPoint = mode === "trip" ? (trip?.to ?? null) : (place ?? null);
+  const photos = usePhotos(
+    photoPoint ? { lat: photoPoint.lat, lon: photoPoint.lon } : null,
+    reloadToken,
+  );
+
   const tripCameras = tripReport?.cameras?.status === "ok" ? tripReport.cameras.data : NO_CAMERAS;
   const mapTrip =
     mode === "trip" && trip
@@ -465,6 +475,12 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
                   onSelectCamera={setSelectedCameraId}
                   aiEnabled={aiEnabled}
                 />
+                <PhotosCard
+                  section={photos.section}
+                  loading={photos.loading}
+                  radiusM={photoRadiusM}
+                  title={t("photos.destinationTitle")}
+                />
               </>
             )
           ) : !place ? (
@@ -536,6 +552,11 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
                 onSelect={setSelectedCameraId}
                 aiEnabled={aiEnabled}
               />
+              <PhotosCard
+                section={photos.section}
+                loading={photos.loading}
+                radiusM={photoRadiusM}
+              />
             </>
           )}
           <SourcesPanel
@@ -549,8 +570,16 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
                     tripData.stops,
                     tripReport?.destinationParking,
                     tripReport?.cameras,
+                    photos.section,
                   ]
-                : [shown?.weather, shown?.traffic, shown?.incidents, shown?.cameras, parking]
+                : [
+                    shown?.weather,
+                    shown?.traffic,
+                    shown?.incidents,
+                    shown?.cameras,
+                    parking,
+                    photos.section,
+                  ]
             }
             providers={providers}
             summary={

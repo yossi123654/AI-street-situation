@@ -22,8 +22,10 @@ The project is pre-1.0. Security fixes are made on the `main` branch.
 Things we especially want to hear about:
 
 - **SSRF**: the server must only fetch camera media from URLs in the camera
-  registry or allowlisted provider hosts, never from user input
-  (`src/services/CameraImageService.ts`, `src/lib/urlSafety.ts`).
+  registry or allowlisted provider hosts, and photos only from URLs a photo
+  provider returned for an id the server itself handed out, never from user
+  input (`src/lib/mediaFetch.ts`, `src/lib/urlSafety.ts`,
+  `src/services/PhotoService.ts`).
 - **Secret exposure**: API keys must never reach the browser, logs or API
   responses.
 - **Injection** through camera registry data or upstream responses (XSS in
@@ -40,12 +42,20 @@ Known limitations, documented on purpose:
   load. Behind a reverse proxy, set `TRUST_PROXY=true`: the proxy-added (last)
   `X-Forwarded-For` entry or `X-Real-IP` is used, never the client-supplied
   first entry.
+- Photo thumbnails use a separate per-client bucket (5× `RATE_LIMIT_PER_MINUTE`),
+  because one photo card loads up to 16 images; they still count towards the
+  global limit, and only photos the server returned can be fetched.
 - Calls to rate-limited public services (Nominatim, OSRM, Overpass) wait in
   bounded queues; when a queue is full the API answers 503 at once instead
   of queueing without limit.
 - AI summaries are cached and shared by location, so the place names in AI
   prompts come from the geocoder, never from request parameters such as
   `label`; trip reports likewise never share one user's labels with another.
+- Panoramax pictures are hosted by many federated instances, so photo URLs
+  from Panoramax may point to any public https host (Wikimedia Commons
+  photos are limited to `upload.wikimedia.org` and `thumb.wikimedia.org`).
+  The URLs come only from the Panoramax meta-catalog, and the private-address
+  and redirect checks still apply.
 - Camera registry entries are reviewed by people. The validator rejects
   non-https URLs and IP literals, and the server rejects private addresses at
   runtime, but a hostname that resolves to a private address is only caught

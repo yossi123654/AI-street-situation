@@ -386,5 +386,22 @@
     "camerasAdd": "מכירים מצלמה? הוסיפו אותה למאגר",
     "cameraIn": "בעוד {time}",
     "cameraAtStart": "בנקודת היציאה"
+  },
+  "photos": {
+    "title": "איך זה נראה כאן",
+    "destinationTitle": "איך נראה היעד",
+    "none": "עדיין אין תמונות שפורסמו בטווח {radius}.",
+    "contribute": "הוסיפו תמונות רחוב ב-Panoramax",
+    "street": "גובה רחוב",
+    "photo": "תמונה",
+    "panorama": "360°",
+    "taken": "צולם ב{date}",
+    "dateUnknown": "תאריך לא ידוע",
+    "away": "במרחק {distance}",
+    "onPanoramax": "צפייה ב-Panoramax",
+    "onCommons": "צפייה בוויקישיתוף",
+    "notLive": "התמונות אינן בזמן אמת: כל אחת מראה את המקום כפי שהיה כשצולמה. פנים ולוחיות רישוי בתמונות הרחוב מטושטשים על ידי Panoramax.",
+    "imageError": "לא ניתן לטעון את התמונה כרגע.",
+    "alt": "תמונה של המקום"
   }
 }

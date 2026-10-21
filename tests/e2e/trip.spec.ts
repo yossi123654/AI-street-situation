@@ -77,6 +77,9 @@ test.describe("trip planning", () => {
     await expect(tripCameras).not.toContainText("Broken camera");
     await expect(tripCameras.getByTestId("camera-viewer")).toBeVisible();
 
+    // Photos of the destination (mock photos sit around Jaffa St, not Tel Aviv).
+    await expect(page.locator("#photos")).toContainText("איך נראה היעד");
+
     // Parking at the destination and the AI briefing.
     await expect(page.locator("#parking")).toContainText("חניה ביעד");
     await expect(page.getByTestId("parking-list").locator("li")).toHaveCount(5);

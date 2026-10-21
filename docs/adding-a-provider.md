@@ -8,7 +8,7 @@ touch the rest of the app.
 src/providers/
   types.ts            interfaces: GeocodingProvider, WeatherProvider, TrafficProvider,
                       IncidentsProvider, CameraProvider, ParkingProvider, RoutingProvider,
-                      StopsProvider, AiProvider
+                      StopsProvider, PhotosProvider, AiProvider
   registry.ts         ALL_PROVIDERS list, selection rules
   geocoding/          nominatim, photon, google
   weather/            openMeteo
@@ -19,6 +19,7 @@ src/providers/
   parking/            overpass (OpenStreetMap)
   routing/            osrm (free default), tomtom (live traffic)
   stops/              overpass (fuel, chargers, rest areas along a route)
+  photos/             panoramax, wikimediaCommons (published photos near a point)
   overpass/           shared Overpass client with endpoint failover
   vision/             ollama, anthropic
 ```

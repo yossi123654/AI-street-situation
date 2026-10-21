@@ -216,4 +216,26 @@ test.describe("with all providers configured", () => {
     await expect(page.getByTestId("analyze-camera")).toHaveCount(0);
     expect((await page.request.get("/api/cameras/il-test-haifa-youtube/image")).status()).toBe(403);
   });
+
+  test("published photos of the place, proxied with credits", async ({ page }) => {
+    await page.goto("/?lat=31.7833&lon=35.2186");
+    const photos = page.getByTestId("photos");
+    await expect(photos.getByTestId("photo-list").locator("li")).toHaveCount(4);
+    // Nearest first: the Commons photo (~38 m), then street-level imagery.
+    await expect(photos.getByTestId("photo-credit")).toContainText("Test Photographer");
+    await expect(photos.getByTestId("photo-credit")).toContainText("CC BY 4.0");
+    const large = photos.getByTestId("photo-large");
+    await expect(large).toHaveAttribute("src", /^\/api\/photos\/commons-4242\/image\?size=large$/);
+    await expect
+      .poll(() => large.evaluate((img: HTMLImageElement) => img.naturalWidth))
+      .toBeGreaterThan(0);
+    await photos.getByTestId("photo-list").locator("li").nth(1).getByRole("button").click();
+    await expect(photos.getByTestId("photo-credit")).toContainText("mapper1");
+    await expect(photos).toContainText("Panoramax");
+    // The browser never sees the upstream image URLs, and unknown ids are refused.
+    const api = await page.request.get("/api/photos?lat=31.7833&lon=35.2186");
+    expect(await api.text()).not.toContain("thumb.jpg");
+    expect((await page.request.get("/api/photos/panoramax-nope/image")).status()).toBe(404);
+    expect((await page.request.get("/api/photos/..%2Fetc/image")).status()).toBe(400);
+  });
 });

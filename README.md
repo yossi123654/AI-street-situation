@@ -19,6 +19,10 @@ Cameras along the route, from Finland's open road-camera feed (Helsinki → Tamp
 
 ![Cameras along a trip, Helsinki to Tampere, real data](docs/screenshots/real-trip-cameras-he.png)
 
+What it looks like here: Panoramax street-level photos in Jerusalem (real data):
+
+![Photos of the place from Panoramax, real data](docs/screenshots/real-photos-he.png)
+
 <details>
 <summary>All features, including AI summary, traffic, incidents and cameras (test fixtures)</summary>
 
@@ -69,6 +73,10 @@ street grid.
 - **Cameras along your route**: a trip lists every permitted camera within
   300 m of the route in the order you pass it, with "in 25 min" labels, so
   you can see the road ahead before you leave.
+- **What it looks like here**: published photos of the place and of a
+  trip's destination, from **Panoramax** street-level imagery and **Wikimedia
+  Commons**, with the date each was taken, the author and the licence. No
+  key; faces and plates in street-level imagery are blurred by Panoramax.
 - **AI image analysis and summary** through a local open-weight model
   (Ollama) or the Anthropic API. AI only sees camera images whose terms
   allow it, keeps camera observations apart from provider data, states
@@ -96,7 +104,8 @@ npm run dev
 Open <http://localhost:3000>. **No API key is needed.** Out of the box you
 get geocoding (Nominatim), weather (Open-Meteo), parking (OpenStreetMap via
 Overpass), the OpenFreeMap vector map, the community camera registry and the
-open camera feeds of Finland and Singapore. Traffic, incidents and AI are switched on by adding
+open camera feeds of Finland and Singapore, and photos from Panoramax and
+Wikimedia Commons. Traffic, incidents and AI are switched on by adding
 keys:
 
 ```bash
@@ -182,7 +191,7 @@ Providers (src/providers, swappable, enabled by configuration)
    geocoding: nominatim · photon · google      weather: open-meteo
    traffic: tomtom · here                      incidents: tomtom · here · WZDx feeds
    cameras: community JSON (incl. YouTube) · TfL · Fintraffic · data.gov.sg · Hong Kong TD
-   parking: overpass (OSM)
+   parking: overpass (OSM)                     photos: panoramax · wikimedia commons
    routing: osrm · tomtom (live traffic)       stops: overpass (OSM)
    ai: ollama · anthropic
 ```

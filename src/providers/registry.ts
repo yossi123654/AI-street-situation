@@ -12,6 +12,8 @@ import { hereIncidents } from "@/providers/incidents/here";
 import { tomtomIncidents } from "@/providers/incidents/tomtom";
 import { wzdxIncidents } from "@/providers/incidents/wzdx";
 import { overpassParking } from "@/providers/parking/overpass";
+import { panoramax } from "@/providers/photos/panoramax";
+import { wikimediaCommons } from "@/providers/photos/wikimediaCommons";
 import { osrm } from "@/providers/routing/osrm";
 import { tomtomRouting } from "@/providers/routing/tomtom";
 import { overpassStops } from "@/providers/stops/overpass";
@@ -50,12 +52,14 @@ export const ALL_PROVIDERS: ProviderDefinition[] = [
   tomtomRouting,
   osrm,
   overpassStops,
+  panoramax,
+  wikimediaCommons,
   ollama,
   anthropic,
 ];
 
 /** Kinds whose providers are all used together rather than picking one. */
-export const MERGED_KINDS = new Set<ProviderKind>(["cameras", "incidents"]);
+export const MERGED_KINDS = new Set<ProviderKind>(["cameras", "incidents", "photos"]);
 
 type Instances = {
   [K in ProviderKind]: Array<{ def: ProviderDefinition<K>; instance: ProviderKindMap[K] }>;
@@ -81,6 +85,7 @@ function build(config: AppConfig): Instances {
     parking: [],
     routing: [],
     stops: [],
+    photos: [],
     ai: [],
   } as unknown as Instances;
   for (const def of ALL_PROVIDERS) {
