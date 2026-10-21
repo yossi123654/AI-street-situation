@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { cameraEntrySchema } from "@/lib/cameraSchema";
+import { cameraEntrySchema, youtubeEmbedUrl } from "@/lib/cameraSchema";
 import type { Camera } from "@/lib/types";
 import { loadCameraDirectory } from "@/providers/cameras/staticJson";
 import { toCameraView } from "@/services/CameraRegistry";
@@ -143,5 +143,74 @@ describe("toCameraView", () => {
       toCameraView({ ...video, permissions: { ...video.permissions, embedAllowed: false } }, 0)
         .videoUrl,
     ).toBeUndefined();
+  });
+});
+
+describe("youtubeEmbedUrl", () => {
+  it("converts watch, live, short, playlist and channel-live URLs to nocookie embeds", () => {
+    expect(youtubeEmbedUrl("https://www.youtube.com/watch?v=abcDEF12345")).toMatch(
+      /^https:\/\/www\.youtube-nocookie\.com\/embed\/abcDEF12345\?autoplay=1&mute=1/,
+    );
+    expect(youtubeEmbedUrl("https://youtu.be/abcDEF12345")).toContain("/embed/abcDEF12345?");
+    expect(youtubeEmbedUrl("https://www.youtube.com/live/abcDEF12345")).toContain(
+      "/embed/abcDEF12345?",
+    );
+    expect(youtubeEmbedUrl("https://www.youtube.com/playlist?list=PLabc_DEF-123")).toContain(
+      "/embed/videoseries?list=PLabc_DEF-123&",
+    );
+    expect(youtubeEmbedUrl("https://www.youtube.com/channel/UCabcdef123456/live")).toContain(
+      "/embed/live_stream?channel=UCabcdef123456&",
+    );
+  });
+
+  it("rejects other hosts, http and injected parameters", () => {
+    expect(youtubeEmbedUrl("http://www.youtube.com/watch?v=abcDEF12345")).toBeNull();
+    expect(youtubeEmbedUrl("https://evil.example/watch?v=abcDEF12345")).toBeNull();
+    expect(youtubeEmbedUrl("https://youtube.com.evil.example/watch?v=abcDEF12345")).toBeNull();
+    expect(youtubeEmbedUrl("https://www.youtube.com/watch?v=abc%22onload")).toBeNull();
+    expect(youtubeEmbedUrl("https://www.youtube.com/channel/notachannel/live")).toBeNull();
+    expect(youtubeEmbedUrl("https://www.youtube.com/@somechannel")).toBeNull();
+    expect(youtubeEmbedUrl("not a url")).toBeNull();
+  });
+
+  it("validates YouTube cameras in the schema", () => {
+    const schema = cameraEntrySchema();
+    const youtube = {
+      ...validEntry,
+      mediaType: "youtube",
+      mediaUrl: "https://www.youtube.com/watch?v=abcDEF12345",
+      permissions: { ...validEntry.permissions, aiAnalysisAllowed: false },
+    };
+    expect(schema.safeParse(youtube).success).toBe(true);
+    expect(
+      schema.safeParse({ ...youtube, mediaUrl: "https://www.youtube.com/@channel" }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        ...youtube,
+        permissions: { ...youtube.permissions, aiAnalysisAllowed: true },
+      }).success,
+    ).toBe(false);
+  });
+
+  it("exposes the embed URL only for embeddable YouTube cameras", () => {
+    const camera = {
+      ...(validEntry as unknown as Camera),
+      lat: 31.78,
+      lon: 35.21,
+      providerId: "community",
+      mediaType: "youtube" as const,
+      mediaUrl: "https://www.youtube.com/watch?v=abcDEF12345",
+    };
+    const view = toCameraView(camera, 0);
+    expect(view.display).toBe("embed");
+    expect(view.embedUrl).toContain("youtube-nocookie.com/embed/abcDEF12345");
+    expect(view.analyzable).toBe(false);
+    const linkOnly = toCameraView(
+      { ...camera, permissions: { ...camera.permissions, embedAllowed: "unknown" } },
+      0,
+    );
+    expect(linkOnly.display).toBe("link");
+    expect(linkOnly.embedUrl).toBeUndefined();
   });
 });

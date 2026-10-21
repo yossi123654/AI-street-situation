@@ -200,4 +200,20 @@ test.describe("with all providers configured", () => {
     const providers = await (await request.get("/api/providers")).json();
     expect(JSON.stringify(providers)).not.toContain("test-key");
   });
+
+  test("YouTube live cameras play in YouTube's privacy-enhanced player", async ({ page }) => {
+    await page.route(/youtube-nocookie\.com/, (route) =>
+      route.fulfill({ status: 200, contentType: "text/html", body: "<html></html>" }),
+    );
+    await page.goto("/?lat=32.8191&lon=34.9983");
+    const frame = page.getByTestId("camera-youtube");
+    await expect(frame).toBeVisible();
+    await expect(frame).toHaveAttribute(
+      "src",
+      /^https:\/\/www\.youtube-nocookie\.com\/embed\/abcDEF12345\?autoplay=1&mute=1/,
+    );
+    // Video streams are never sent to the AI.
+    await expect(page.getByTestId("analyze-camera")).toHaveCount(0);
+    expect((await page.request.get("/api/cameras/il-test-haifa-youtube/image")).status()).toBe(403);
+  });
 });

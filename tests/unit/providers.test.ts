@@ -378,6 +378,8 @@ describe("registry", () => {
       "geocoding:nominatim",
       "weather:open-meteo",
       "cameras:community",
+      "cameras:digitraffic-weathercams",
+      "cameras:sg-lta-traffic-images",
       "parking:overpass",
       "routing:osrm",
       "stops:overpass-stops",

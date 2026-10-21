@@ -14,7 +14,8 @@ src/providers/
   weather/            openMeteo
   traffic/            tomtom, here
   incidents/          tomtom, here, wzdx (open road-work feeds)
-  cameras/            staticJson (community registry), tflJamCam
+  cameras/            staticJson (community registry), tflJamCam, digitraffic,
+                      singapore, hongKong, cachedList (shared list cache)
   parking/            overpass (OpenStreetMap)
   routing/            osrm (free default), tomtom (live traffic)
   stops/              overpass (fuel, chargers, rest areas along a route)
@@ -74,7 +75,10 @@ Guidelines:
 - **Never log or return secrets.**
 - Camera providers: return `Camera` objects with honest permissions, and
   implement `allowedMediaHosts()` so the image proxy only fetches from your
-  provider's media hosts.
+  provider's media hosts. Feed-based camera providers should also set
+  `coverage` (the bounding boxes they have cameras in, so searches elsewhere
+  never call them) and `idPrefix` (so image requests only load the provider
+  that owns the id). Cache the camera list with `cachedList()`.
 
 ## 2. Add configuration
 

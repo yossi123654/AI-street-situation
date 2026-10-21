@@ -1,5 +1,8 @@
 import { getConfig, type AppConfig } from "@/lib/config";
 import type { ProviderKind, ProviderStatus } from "@/lib/types";
+import { digitrafficCameras } from "@/providers/cameras/digitraffic";
+import { hongKongCameras } from "@/providers/cameras/hongKong";
+import { singaporeCameras } from "@/providers/cameras/singapore";
 import { staticJsonCameras } from "@/providers/cameras/staticJson";
 import { tflJamCams } from "@/providers/cameras/tflJamCam";
 import { google } from "@/providers/geocoding/google";
@@ -39,6 +42,9 @@ export const ALL_PROVIDERS: ProviderDefinition[] = [
   wzdxIncidents,
   staticJsonCameras,
   tflJamCams,
+  digitrafficCameras,
+  singaporeCameras,
+  hongKongCameras,
   overpassParking,
   // routing: TomTom first when keyed (traffic-aware), OSRM is the free default.
   tomtomRouting,

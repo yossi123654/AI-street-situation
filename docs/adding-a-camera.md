@@ -50,7 +50,7 @@ forbids reuse.
       "city": "jerusalem", // must match the file name
       "location": { "lat": 31.7827, "lon": 35.2165 },
       "cameraType": "traffic", // traffic | scenic | public
-      "mediaType": "image", // image | video | link
+      "mediaType": "image", // image | video | youtube | link
       "sourceUrl": "https://operator.example/cameras/123", // human-facing page
       "mediaUrl": "https://images.operator.example/123.jpg", // direct image/video; omit for "link"
       "operator": { "name": "Example Transport Authority", "url": "https://operator.example" },
@@ -78,11 +78,43 @@ Rules the validator enforces:
 
 - `sourceUrl` and `mediaUrl` use `https://` and a domain name (no IP
   addresses, no `localhost`).
-- `mediaUrl` is required for `image` and `video`, and forbidden for `link`.
+- `mediaUrl` is required for `image`, `video` and `youtube`, and forbidden for `link`.
+- For `youtube`, `mediaUrl` is a `youtube.com` watch, `/live/`, playlist or
+  `channel/<id>/live` URL (see below).
 - `aiAnalysisAllowed: true` only for `image` cameras.
 - `id` starts with the country code and is unique across all files.
 - `country` and `city` match the folder and file name.
 - `lastVerified` is a real date and not in the future.
+
+## YouTube live cameras
+
+Many operators stream their cameras on YouTube. Use `"mediaType": "youtube"`
+and one of these as `mediaUrl`:
+
+- `https://www.youtube.com/watch?v=<video id>` or `https://www.youtube.com/live/<video id>`
+- `https://www.youtube.com/playlist?list=<playlist id>`
+- `https://www.youtube.com/channel/<channel id starting with UC>/live`
+  (the channel's current live stream; it keeps working when the stream
+  restarts with a new video id)
+
+The app plays it in YouTube's own player (`youtube-nocookie.com`), which
+YouTube's terms allow when the channel has enabled embedding. Set
+`embedAllowed: true` only when:
+
+- the stream is published **by the camera's operator** (not a re-upload), and
+- embedding is enabled (YouTube's oEmbed endpoint,
+  `https://www.youtube.com/oembed?url=<the URL>&format=json`, returns 200).
+
+Use `"license": { "name": "YouTube Terms of Service (embedded player)", "termsUrl": "https://www.youtube.com/t/terms" }`
+unless the operator publishes its own terms. `aiAnalysisAllowed` must be
+`false` or `"unknown"`: the app never analyses video.
+
+## Asking an operator for permission
+
+Most cameras end up as `"unknown"` because the operator never published
+terms. Asking usually takes one email. Use the
+[permission request letter](camera-permission-request.md) (Hebrew and
+English) and link the operator's reply in `notes` or `license.termsUrl`.
 
 ## Checklist for your pull request
 

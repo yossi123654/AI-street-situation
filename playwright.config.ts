@@ -14,6 +14,9 @@ const fullEnv = {
   OVERPASS_URLS: `${MOCK}/overpass/api/interpreter`,
   OLLAMA_URL: `${MOCK}/ollama`,
   CAMERA_DATA_DIR: "tests/fixtures/cameras",
+  // Open camera feeds only answer searches in their own country; keep them offline anyway.
+  DIGITRAFFIC_URL: `${MOCK}/digitraffic`,
+  SG_TRAFFIC_IMAGES_URL: `${MOCK}/data-gov-sg`,
   DEV_ALLOW_INSECURE_MEDIA: "true",
   MAP_TYPE: "vector",
   MAP_STYLE_URL: `${MOCK}/style.json`,
@@ -30,6 +33,9 @@ const minimalEnv = {
   OPEN_METEO_URL: `${MOCK}/open-meteo`,
   OSRM_URL: `${MOCK}/osrm/routed-car`,
   CAMERA_DATA_DIR: "tests/fixtures/empty-cameras",
+  // Open camera feeds only answer searches in their own country; keep them offline anyway.
+  DIGITRAFFIC_URL: `${MOCK}/digitraffic`,
+  SG_TRAFFIC_IMAGES_URL: `${MOCK}/data-gov-sg`,
   OVERPASS_URLS: `${MOCK}/overpass/api/interpreter`,
   MAP_TYPE: "raster",
   MAP_TILE_URL: `${MOCK}/tiles/{z}/{x}/{y}.png`,

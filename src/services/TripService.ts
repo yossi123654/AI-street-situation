@@ -6,6 +6,8 @@ import { haversineMeters, roundCoord } from "@/lib/geo";
 import {
   cumulativeDistances,
   interpolateAlong,
+  lineBounds,
+  nearestOnLine,
   nearestVertex,
   sampleIndexes,
 } from "@/lib/routeGeometry";
@@ -22,11 +24,13 @@ import type {
   Section,
   SourceInfo,
   TravelMode,
+  TripCamera,
   TripMissingCode,
   TripReport,
   TripStop,
 } from "@/lib/types";
 import { getProvider, getProviders } from "@/providers/registry";
+import { CameraRegistry, toCameraView } from "@/services/CameraRegistry";
 import type { ParkingService } from "@/services/ParkingService";
 
 const MINUTE = 60_000;
@@ -40,6 +44,9 @@ const INCIDENT_SAMPLE_MAX = 4;
 const INCIDENT_SAMPLE_RADIUS_M = 8000;
 const CORRIDOR_M = 1000;
 const STOP_CORRIDOR_M = 400;
+/** Cameras this close to the route line are shown along the trip. */
+const CAMERA_CORRIDOR_M = 300;
+const CAMERA_MAX = 40;
 
 type Endpoint = LatLon & { label?: string };
 
@@ -66,6 +73,16 @@ async function section<T>(
       message: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+/** Up to `max` items picked evenly from an ordered list, always keeping the first and last. */
+export function spreadEvenly<T>(items: T[], max: number): T[] {
+  if (items.length <= max) return items;
+  if (max <= 1) return items.slice(0, max);
+  return Array.from(
+    { length: max },
+    (_, i) => items[Math.round((i * (items.length - 1)) / (max - 1))]!,
+  );
 }
 
 /** Departures within this window count as "now" (live data applies). */
@@ -131,7 +148,10 @@ export class TripService {
   private readonly stopsCache = new TtlCache<TripStop[]>(200);
   private readonly reportCache = new TtlCache<TripReport>(200);
 
-  constructor(private readonly parking: ParkingService) {}
+  constructor(
+    private readonly parking: ParkingService,
+    private readonly cameraRegistry: CameraRegistry = new CameraRegistry(),
+  ) {}
 
   isConfigured(): boolean {
     return Boolean(getProvider("routing"));
@@ -213,6 +233,7 @@ export class TripService {
         incidents: { status: "unavailable", reason: "no_data" } as const,
         stops: { status: "unavailable", reason: "no_data" } as const,
         destinationParking: { status: "unavailable", reason: "no_data" } as const,
+        cameras: { status: "unavailable", reason: "no_data" } as const,
       };
       return {
         from,
@@ -235,17 +256,26 @@ export class TripService {
     };
 
     // Stops are fetched separately (/api/trip/stops): Overpass can be slow and must not delay the trip.
-    const [weatherAlong, trafficAlong, incidents, destinationParking] = await Promise.all([
+    const [weatherAlong, trafficAlong, incidents, destinationParking, cameras] = await Promise.all([
       this.weatherAlong(r, cumulative, departureTime, pointAt),
       this.trafficAlong(r, cumulative, pointAt, departureIsNow),
       this.incidentsAlong(r, cumulative, locale, pointAt, departureTime),
       this.parking.find(to, getConfig().PARKING_SEARCH_RADIUS_M),
+      this.camerasAlong(r, cumulative),
     ]);
     const stops: Section<TripStop[]> = getProvider("stops")
       ? { status: "unavailable", reason: "no_data" }
       : { status: "unavailable", reason: "not_configured" };
 
-    const base = { route, weatherAlong, trafficAlong, incidents, stops, destinationParking };
+    const base = {
+      route,
+      weatherAlong,
+      trafficAlong,
+      incidents,
+      stops,
+      destinationParking,
+      cameras,
+    };
     return {
       from,
       to,
@@ -256,6 +286,51 @@ export class TripService {
       ...base,
       ...assessTrip(base),
     };
+  }
+
+  /** Cameras within a short distance of the route line, ordered along it. */
+  private camerasAlong(route: Route, cumulative: number[]) {
+    return section<TripCamera[]>("cameras", true, async () => {
+      const line = route.geometry;
+      const { cameras } = await this.cameraRegistry.listAll(lineBounds(line, CAMERA_CORRIDOR_M));
+      const near = cameras.flatMap((camera) => {
+        const nearest = nearestOnLine(line, cumulative, camera, CAMERA_CORRIDOR_M);
+        return nearest ? [{ camera, nearest }] : [];
+      });
+      if (near.length === 0) return null;
+      near.sort((a, b) => a.nearest.distanceAlongM - b.nearest.distanceAlongM);
+      // One camera per spot: feeds such as Fintraffic list each view of a mast separately.
+      const seen = new Set<string>();
+      const spots = near.filter(({ camera }) => {
+        const key = `${camera.lat.toFixed(4)},${camera.lon.toFixed(4)}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const data = spreadEvenly(spots, CAMERA_MAX).map(({ camera, nearest }): TripCamera => {
+        const distanceAlongM = nearest.distanceAlongM;
+        const roadName = roadAt(route, distanceAlongM);
+        return {
+          ...toCameraView(camera, nearest.distanceM),
+          distanceAlongM: Math.round(distanceAlongM),
+          etaOffsetS: Math.round(etaOffsetAt(route, cumulative, distanceAlongM)),
+          ...(roadName ? { roadName } : {}),
+        };
+      });
+      return {
+        data,
+        freshness: "unknown" as Freshness,
+        sources: uniqueSources(
+          data.map((camera) => ({
+            providerId: `camera:${camera.operator.name}`,
+            name: camera.operator.name,
+            attribution: camera.license.attribution ?? camera.operator.name,
+            url: camera.license.termsUrl,
+            fetchedAt: new Date().toISOString(),
+          })),
+        ),
+      };
+    });
   }
 
   private weatherAlong(

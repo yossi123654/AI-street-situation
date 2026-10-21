@@ -15,6 +15,10 @@ says which source each fact came from and what is missing.
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | ![Trip Jerusalem → Tel Aviv, real data](docs/screenshots/real-trip-he.png) | ![London, English, real data](docs/screenshots/real-london-en.png) |
 
+Cameras along the route, from Finland's open road-camera feed (Helsinki → Tampere, real data):
+
+![Cameras along a trip, Helsinki to Tampere, real data](docs/screenshots/real-trip-cameras-he.png)
+
 <details>
 <summary>All features, including AI summary, traffic, incidents and cameras (test fixtures)</summary>
 
@@ -55,8 +59,16 @@ street grid.
 - **Vector map** from OpenFreeMap (free, no key, no usage limits) rendered
   with MapLibre, with automatic fallback to raster tiles.
 - **Public cameras** from a community-maintained JSON registry and from
-  providers such as TfL JamCams. Images are embedded **only** when the
-  source's terms allow it; otherwise the app links to the source.
+  open government feeds: Finland's road weather cameras and Singapore's
+  traffic cameras work out of the box, London (TfL) and Hong Kong are
+  opt-in. **YouTube live cameras** from the registry play in YouTube's
+  privacy-enhanced player. Images are embedded **only**
+  when the source's terms allow it; otherwise the app links to the source.
+  Know an operator? The [permission request letter](docs/camera-permission-request.md)
+  (Hebrew and English) is ready to send.
+- **Cameras along your route**: a trip lists every permitted camera within
+  300 m of the route in the order you pass it, with "in 25 min" labels, so
+  you can see the road ahead before you leave.
 - **AI image analysis and summary** through a local open-weight model
   (Ollama) or the Anthropic API. AI only sees camera images whose terms
   allow it, keeps camera observations apart from provider data, states
@@ -66,7 +78,9 @@ street grid.
 - **Hebrew (RTL) by default, English included**, with i18n built in so the
   community can add languages.
 - **Privacy**: no accounts, no analytics, no tracking. Camera images are kept
-  in memory for at most a few minutes and never written to disk.
+  in memory for at most a few minutes and never written to disk. YouTube
+  cameras are the one exception to "no third parties": when you open one,
+  your browser loads YouTube's player from `youtube-nocookie.com`.
 
 ## Quick start
 
@@ -81,7 +95,8 @@ npm run dev
 
 Open <http://localhost:3000>. **No API key is needed.** Out of the box you
 get geocoding (Nominatim), weather (Open-Meteo), parking (OpenStreetMap via
-Overpass), the OpenFreeMap vector map and the community camera registry. Traffic, incidents and AI are switched on by adding
+Overpass), the OpenFreeMap vector map, the community camera registry and the
+open camera feeds of Finland and Singapore. Traffic, incidents and AI are switched on by adding
 keys:
 
 ```bash
@@ -94,6 +109,7 @@ cp .env.example .env.local   # then edit; every value is optional
 | AI summary and image analysis (local, free) | `OLLAMA_URL=http://localhost:11434` and `ollama pull qwen2.5vl:7b` |
 | AI summary and image analysis (hosted)      | `ANTHROPIC_API_KEY`                                                |
 | London traffic cameras                      | `TFL_APP_KEY` (free registration)                                  |
+| Hong Kong traffic cameras                   | `HK_TRAFFIC_CAMERAS_ENABLED=true` (read the terms first)           |
 | Better Hebrew geocoding                     | `GEOCODING_PROVIDER=google` and `GOOGLE_MAPS_API_KEY`              |
 
 The **providers panel** at the bottom of the page shows which providers are
@@ -165,7 +181,8 @@ Services
 Providers (src/providers, swappable, enabled by configuration)
    geocoding: nominatim · photon · google      weather: open-meteo
    traffic: tomtom · here                      incidents: tomtom · here · WZDx feeds
-   cameras: community JSON · TfL JamCams       parking: overpass (OSM)
+   cameras: community JSON (incl. YouTube) · TfL · Fintraffic · data.gov.sg · Hong Kong TD
+   parking: overpass (OSM)
    routing: osrm · tomtom (live traffic)       stops: overpass (OSM)
    ai: ollama · anthropic
 ```

@@ -17,7 +17,7 @@ function createServices() {
   const vision = new VisionAnalyzer(images);
   const situation = new SituationService(cameras);
   const parking = new ParkingService();
-  const trip = new TripService(parking);
+  const trip = new TripService(parking, cameras);
   const summary = new SituationSummaryService(situation, cameras, vision, parking, trip, location);
   return { location, cameras, images, availability, vision, situation, parking, trip, summary };
 }

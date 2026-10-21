@@ -308,6 +308,7 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
     tripReport?.destinationParking.status === "ok"
       ? tripReport.destinationParking.data
       : NO_PARKING;
+  const tripCameras = tripReport?.cameras?.status === "ok" ? tripReport.cameras.data : NO_CAMERAS;
   const mapTrip =
     mode === "trip" && trip
       ? {
@@ -372,7 +373,7 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
             <MapView
               config={map}
               place={place}
-              cameras={mode === "place" ? cameras : NO_CAMERAS}
+              cameras={mode === "place" ? cameras : tripCameras}
               parking={mode === "place" ? parkingFacilities : tripParking}
               trip={mapTrip}
               selectedCameraId={selectedCameraId}
@@ -460,6 +461,9 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
                   parkingRadiusM={parkingRadiusM}
                   selectedParkingId={selectedParkingId}
                   onSelectParking={setSelectedParkingId}
+                  selectedCameraId={selectedCameraId}
+                  onSelectCamera={setSelectedCameraId}
+                  aiEnabled={aiEnabled}
                 />
               </>
             )
@@ -544,6 +548,7 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM }: Props) {
                     tripReport?.incidents,
                     tripData.stops,
                     tripReport?.destinationParking,
+                    tripReport?.cameras,
                   ]
                 : [shown?.weather, shown?.traffic, shown?.incidents, shown?.cameras, parking]
             }

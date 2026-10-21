@@ -5,20 +5,22 @@ import {
   cumulativeDistances,
   interpolateAlong,
   lineBounds,
+  nearestOnLine,
   nearestVertex,
   sampleIndexes,
   thinLine,
 } from "@/lib/routeGeometry";
-import type { Route, TripReport } from "@/lib/types";
+import type { Camera, Route, TripReport } from "@/lib/types";
 import { getProvider } from "@/providers/registry";
 import { majorSteps, osrm, stepLabel } from "@/providers/routing/osrm";
 import { stepsFromInstructions, tomtomRouting } from "@/providers/routing/tomtom";
 import { elementToStop, overpassStops } from "@/providers/stops/overpass";
 import { nearestHourIndex, openMeteo } from "@/providers/weather/openMeteo";
+import type { CameraRegistry } from "@/services/CameraRegistry";
 import { collapseToSettlement } from "@/services/LocationService";
 import { ParkingService } from "@/services/ParkingService";
 import { buildTripFacts } from "@/services/SituationSummaryService";
-import { TripService, assessTrip, etaOffsetAt, roadAt } from "@/services/TripService";
+import { TripService, assessTrip, etaOffsetAt, roadAt, spreadEvenly } from "@/services/TripService";
 import { jsonResponse, mockFetch, withEnv } from "./helpers";
 
 let restore: (() => void) | undefined;
@@ -746,5 +748,93 @@ describe("departure time", () => {
     expect(now.departureIsNow).toBe(true);
     expect(now.trafficAlong.status).toBe("ok");
     expect(flowCalls.length).toBeGreaterThan(0);
+  });
+});
+
+describe("cameras along the route", () => {
+  it("measures distance to segments, not just vertices", () => {
+    const cumulative = cumulativeDistances(line);
+    // Halfway between the 2nd and 3rd vertex (vertices are ~11 km apart), ~190 m east.
+    const near = nearestOnLine(line, cumulative, { lat: 31.15, lon: 35.002 }, 300);
+    expect(near).not.toBeNull();
+    expect(near!.distanceM).toBeGreaterThan(150);
+    expect(near!.distanceM).toBeLessThan(230);
+    expect(near!.distanceAlongM).toBeGreaterThan(16_000);
+    expect(near!.distanceAlongM).toBeLessThan(17_400);
+    expect(nearestOnLine(line, cumulative, { lat: 31.15, lon: 35.01 }, 300)).toBeNull();
+    expect(nearestOnLine([], [], { lat: 31, lon: 35 })).toBeNull();
+  });
+
+  it("spreads a long camera list evenly along the route", () => {
+    const items = Array.from({ length: 100 }, (_, i) => i);
+    const picked = spreadEvenly(items, 5);
+    expect(picked).toEqual([0, 25, 50, 74, 99]);
+    expect(spreadEvenly([1, 2], 5)).toEqual([1, 2]);
+  });
+
+  it("lists cameras near the route in the order they are passed, with an ETA", async () => {
+    restore = withEnv({
+      OSRM_URL: "https://osrm.example.org/routed-car",
+      WEATHER_ENABLED: "false",
+      PARKING_ENABLED: "false",
+    });
+    mockFetch((url) => {
+      if (url.hostname === "osrm.example.org") {
+        return jsonResponse({
+          code: "Ok",
+          routes: [
+            {
+              distance: 33_000,
+              duration: 1800,
+              geometry: { type: "LineString", coordinates: line.map(([lat, lon]) => [lon, lat]) },
+              legs: [{ steps: [{ ref: "1", name: "Hwy", distance: 33_000, duration: 1800 }] }],
+            },
+          ],
+        });
+      }
+      throw new Error(`unexpected ${url.href}`);
+    });
+    const camera = (id: string, lat: number, lon: number): Camera => ({
+      id,
+      name: id,
+      country: "il",
+      city: "test",
+      lat,
+      lon,
+      cameraType: "traffic",
+      mediaType: "image",
+      sourceUrl: "https://example.org",
+      mediaUrl: "https://example.org/a.jpg",
+      operator: { name: "Op" },
+      license: { name: "CC BY 4.0", termsUrl: "https://example.org/terms" },
+      permissions: { embedAllowed: true, aiAnalysisAllowed: false, commercialUseAllowed: true },
+      refreshSeconds: 60,
+      verification: { lastVerified: "2026-10-21", verifiedBy: "test" },
+      providerId: "community",
+    });
+    const listAll = vi.fn(async () => ({
+      cameras: [
+        camera("il-late", 31.25, 35.0005),
+        camera("il-far", 31.05, 35.02),
+        camera("il-early", 31.15, 35.002),
+        // A second view from the same mast is not listed twice.
+        camera("il-early-view-2", 31.15, 35.002),
+      ],
+      errors: [],
+    }));
+    const registry = { listAll } as unknown as CameraRegistry;
+    const service = new TripService(new ParkingService(), registry);
+    const report = await service.plan({ lat: 31, lon: 35 }, { lat: 31.3, lon: 35 }, "en");
+    expect(listAll).toHaveBeenCalledOnce();
+    expect(report.cameras.status).toBe("ok");
+    if (report.cameras.status !== "ok") return;
+    expect(report.cameras.data.map((c) => c.id)).toEqual(["il-early", "il-late"]);
+    const [early] = report.cameras.data;
+    expect(early!.display).toBe("embed");
+    expect("mediaUrl" in early!).toBe(false);
+    expect(early!.etaOffsetS).toBeGreaterThan(800);
+    expect(early!.etaOffsetS).toBeLessThan(1000);
+    // Cameras never count as "missing" trip data.
+    expect(report.missing).not.toContain("cameras");
   });
 });

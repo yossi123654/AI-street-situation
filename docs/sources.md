@@ -25,24 +25,27 @@ issue or a pull request that updates this file.
 
 ## Summary
 
-| Area                                    | Source                                   | Default?          | Key needed              | Embed                 | AI analysis | Status            |
-| --------------------------------------- | ---------------------------------------- | ----------------- | ----------------------- | --------------------- | ----------- | ----------------- |
-| Map (vector)                            | OpenFreeMap                              | Yes               | No                      | Yes, with attribution | n/a         | ✅                |
-| Map tiles (raster)                      | OpenStreetMap tile server                | Fallback / opt-in | No                      | Yes, with attribution | n/a         | ✅                |
-| Geocoding                               | Nominatim (OSMF public instance)         | Yes               | No                      | n/a                   | n/a         | ✅                |
-| Geocoding                               | Photon (komoot public instance)          | Opt-in            | No                      | n/a                   | n/a         | ✅                |
-| Geocoding                               | Google Geocoding API                     | Opt-in            | Yes                     | n/a                   | n/a         | ⚠️                |
-| Weather                                 | Open-Meteo                               | Yes               | No                      | Yes, with attribution | n/a         | ✅                |
-| Parking                                 | OpenStreetMap via Overpass API           | Yes               | No                      | Yes, with attribution | n/a         | ✅                |
-| Traffic flow + incidents                | TomTom Traffic API                       | Opt-in            | Yes                     | Per TomTom terms      | n/a         | ⚠️                |
-| Traffic flow + incidents                | HERE Traffic API v7                      | Opt-in            | Yes                     | Per HERE terms        | n/a         | ⚠️                |
-| Road works (open data)                  | WZDx v4 feeds from road authorities      | Opt-in            | No (feed URL)           | Per feed licence      | n/a         | Per feed          |
-| Cameras                                 | TfL JamCams (London)                     | Opt-in            | Yes (free registration) | Yes                   | Yes         | ⚠️ (API ✅)       |
-| Cameras                                 | Community registry (`data/cameras`)      | Yes               | No                      | Per camera            | Per camera  | Per entry         |
-| Camera                                  | Western Wall live stream (thekotel.org)  | Yes               | No                      | No (terms unknown)    | No          | ✅ link only      |
-| AI                                      | Ollama (local open-weight models)        | Opt-in            | No                      | n/a                   | n/a         | ✅ (runs locally) |
-| AI                                      | Anthropic API                            | Opt-in            | Yes                     | n/a                   | n/a         | ⚠️                |
-| Cameras / incidents / parking occupancy | Israeli government and municipal sources | No                | —                       | —                     | —           | ❌ (see below)    |
+| Area                                    | Source                                       | Default?          | Key needed              | Embed                      | AI analysis | Status            |
+| --------------------------------------- | -------------------------------------------- | ----------------- | ----------------------- | -------------------------- | ----------- | ----------------- |
+| Map (vector)                            | OpenFreeMap                                  | Yes               | No                      | Yes, with attribution      | n/a         | ✅                |
+| Map tiles (raster)                      | OpenStreetMap tile server                    | Fallback / opt-in | No                      | Yes, with attribution      | n/a         | ✅                |
+| Geocoding                               | Nominatim (OSMF public instance)             | Yes               | No                      | n/a                        | n/a         | ✅                |
+| Geocoding                               | Photon (komoot public instance)              | Opt-in            | No                      | n/a                        | n/a         | ✅                |
+| Geocoding                               | Google Geocoding API                         | Opt-in            | Yes                     | n/a                        | n/a         | ⚠️                |
+| Weather                                 | Open-Meteo                                   | Yes               | No                      | Yes, with attribution      | n/a         | ✅                |
+| Parking                                 | OpenStreetMap via Overpass API               | Yes               | No                      | Yes, with attribution      | n/a         | ✅                |
+| Traffic flow + incidents                | TomTom Traffic API                           | Opt-in            | Yes                     | Per TomTom terms           | n/a         | ⚠️                |
+| Traffic flow + incidents                | HERE Traffic API v7                          | Opt-in            | Yes                     | Per HERE terms             | n/a         | ⚠️                |
+| Road works (open data)                  | WZDx v4 feeds from road authorities          | Opt-in            | No (feed URL)           | Per feed licence           | n/a         | Per feed          |
+| Cameras                                 | TfL JamCams (London)                         | Opt-in            | Yes (free registration) | Yes                        | Yes         | ⚠️ (API ✅)       |
+| Cameras                                 | Community registry (`data/cameras`)          | Yes               | No                      | Per camera                 | Per camera  | Per entry         |
+| Cameras                                 | Fintraffic road weather cameras (Finland)    | Yes               | No                      | Yes (CC BY 4.0)            | Yes         | ✅                |
+| Cameras                                 | LTA traffic cameras, data.gov.sg (Singapore) | Yes               | No                      | Yes (SG Open Data Licence) | Yes         | ✅                |
+| Cameras                                 | Transport Department snapshots (Hong Kong)   | Opt-in            | No                      | Yes (DATA.GOV.HK terms)    | Yes         | ✅ (indemnity)    |
+| Camera                                  | Western Wall live stream (thekotel.org)      | Yes               | No                      | No (terms unknown)         | No          | ✅ link only      |
+| AI                                      | Ollama (local open-weight models)            | Opt-in            | No                      | n/a                        | n/a         | ✅ (runs locally) |
+| AI                                      | Anthropic API                                | Opt-in            | Yes                     | n/a                        | n/a         | ⚠️                |
+| Cameras / incidents / parking occupancy | Israeli government and municipal sources     | No                | —                       | —                          | —           | ❌ (see below)    |
 
 ## Map
 
@@ -298,7 +301,83 @@ Every entry records its operator, licence, terms URL and three permissions
 **Current state:** one Israeli entry, the Western Wall live stream, as an
 external link only (see below). No Israeli source with terms that allow
 embedding or AI analysis has been found yet. We would rather ship few
-cameras than cameras whose terms we cannot show.
+cameras than cameras whose terms we cannot show. To ask an
+operator for permission, use the
+[permission request letter](camera-permission-request.md).
+
+### Coverage areas
+
+Feed-based camera providers declare the area they cover (a bounding box).
+A search only calls the providers whose area overlaps it, so enabling the
+Finnish or Singaporean feed costs nothing for a search in Israel. The same
+applies to trips: only feeds covering the route are asked.
+
+### YouTube live streams (`mediaType: "youtube"`)
+
+Many operators publish live cameras on YouTube. The registry accepts a
+`youtube.com` watch, `/live/`, playlist or `channel/<id>/live` URL, and the
+app shows it in YouTube's own embedded player on `youtube-nocookie.com`
+(YouTube's privacy-enhanced mode). This is what YouTube's Terms of Service
+allow: embedding through the YouTube player when the channel has enabled
+embedding. We never download, re-stream or analyse the video, so
+`aiAnalysisAllowed` must not be `true` for these cameras. Only add streams
+published by the camera's operator itself; re-uploads of someone else's
+camera are not accepted.
+
+### Fintraffic road weather cameras, Finland (default)
+
+- API: `https://tie.digitraffic.fi/api/weathercam/v1/stations` (Digitraffic,
+  no key; gzip and a `Digitraffic-User` header are required). Verified live
+  on 2026-10-21: 815 stations, 2,268 active views. Images at
+  `https://weathercam.digitraffic.fi/<preset>.jpg`, updated about every 10
+  minutes.
+- Operator: Fintraffic.
+- Licence: **Creative Commons Attribution 4.0**, including commercial use,
+  per <https://www.digitraffic.fi/en/terms-of-service/>.
+- Attribution: **"Source: Fintraffic / digitraffic.fi, license CC 4.0 BY"**.
+- The image proxy only fetches from `weathercam.digitraffic.fi`.
+- Switch off with `DIGITRAFFIC_CAMERAS_ENABLED=false`.
+
+### LTA traffic cameras, Singapore (default)
+
+- API: `https://api.data.gov.sg/v1/transport/traffic-images` (no key). The
+  feed returns the latest snapshot of each camera; image URLs change with
+  every snapshot, so the list is refreshed every minute. On 2026-10-21 the
+  feed listed only 8 cameras (it has listed far more in the past); the
+  provider shows whatever the feed returns.
+- Operator: Land Transport Authority (LTA), published on data.gov.sg.
+- Licence: **Singapore Open Data Licence v1.0**
+  (<https://data.gov.sg/open-data-licence>), commercial use allowed.
+- Attribution, as the licence asks: "Contains information from Traffic
+  Images accessed on _date_ from LTA via data.gov.sg, made available under
+  the terms of the Singapore Open Data Licence version 1.0".
+- The image proxy only fetches from `images.data.gov.sg`.
+- Switch off with `SG_TRAFFIC_CAMERAS_ENABLED=false`.
+
+### Transport Department snapshots, Hong Kong (opt-in: `HK_TRAFFIC_CAMERAS_ENABLED=true`)
+
+- Camera list:
+  `https://static.data.gov.hk/td/traffic-snapshot-images/code/Traffic_Camera_Locations_En.xml`
+  (no key). Verified live on 2026-10-21: 1,013 cameras, JPEG snapshots on
+  `tdcctv.data.one.gov.hk`, updated every 2 minutes.
+- Operator: Transport Department, HKSAR Government, published on DATA.GOV.HK.
+- Terms: <https://data.gov.hk/en/terms-and-conditions>. Browsing,
+  downloading, distributing and reproducing are allowed free of charge, for
+  commercial and non-commercial purposes, with attribution to the
+  Government, the Transport Department and DATA.GOV.HK.
+- **Why it is opt-in:** the terms also require users to indemnify the
+  Government against infringement claims arising from their use. That is a
+  legal commitment the person running the server should make knowingly.
+
+### Feeds we looked at and did not add
+
+- **New York City DOT cameras** (`webcams.nyctmc.org`): an open JSON API
+  exists, but we found no reuse licence, and in 2024 the city sent a
+  cease-and-desist letter to an artist whose site used the feeds, citing the
+  site's terms of use.
+- **Caltrans CCTV (California)**: the CWWP2 JSON feeds are public, but we
+  could not read the Conditions of Use page to confirm reuse terms.
+- **Ontario 511**: the camera API now requires a key.
 
 ### TfL JamCams, London (`TFL_APP_KEY`)
 
@@ -332,9 +411,12 @@ cameras than cameras whose terms we cannot show.
   described in 2016 press coverage): we could not confirm a current URL or
   any terms of use.
 - **Western Wall cameras** (Western Wall Heritage Foundation): the official
-  page <https://thekotel.org/he/kotel/kotel_cameras/> embeds a live player and
-  a YouTube playlist. No reuse terms are published, so it is in the registry
-  as an **external link only** (`il-jerusalem-western-wall-plaza`).
+  page <https://thekotel.org/he/kotel/kotel_cameras/> plays the live view in a
+  third-party player (`wm.cast-tv.com`). The YouTube playlist on the same
+  page holds information videos, not the camera (checked 2026-10-21). No
+  reuse terms are published, so it is in the registry as an **external link
+  only** (`il-jerusalem-western-wall-plaza`). If the foundation streams the
+  camera on its YouTube channel, or grants permission, it can be embedded.
 - **Tel Aviv-Yafo municipality**: its "cameras" page
   (`/Residents/Transportation/Pages/TrafficCameras.aspx`) is about
   enforcement cameras, not live feeds.

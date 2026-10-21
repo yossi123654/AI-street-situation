@@ -6,6 +6,51 @@ import { z } from "zod";
  * `scripts/validate-cameras.ts` under plain Node.js.
  */
 
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{6,64}$/;
+const YOUTUBE_HOSTS = new Set(["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"]);
+
+/**
+ * Turns a YouTube watch, live, playlist or channel URL into a privacy-enhanced
+ * (youtube-nocookie.com) embed URL, or null when the URL is not one of those.
+ * Embeds go through YouTube's own player, which YouTube's terms allow when the
+ * channel has enabled embedding.
+ */
+export function youtubeEmbedUrl(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || !YOUTUBE_HOSTS.has(url.hostname.toLowerCase())) return null;
+  const parts = url.pathname.split("/").filter(Boolean);
+  const embed = (path: string, query = "") =>
+    `https://www.youtube-nocookie.com/embed/${path}?${query ? `${query}&` : ""}autoplay=1&mute=1&playsinline=1&rel=0`;
+  const id = (value: string | null | undefined) => (value && YOUTUBE_ID.test(value) ? value : null);
+  if (url.hostname.toLowerCase() === "youtu.be") {
+    const video = id(parts[0]);
+    return video && parts.length === 1 ? embed(video) : null;
+  }
+  if (parts[0] === "watch" && parts.length === 1) {
+    const video = id(url.searchParams.get("v"));
+    return video ? embed(video) : null;
+  }
+  if ((parts[0] === "live" || parts[0] === "embed") && parts.length === 2) {
+    const video = id(parts[1]);
+    return video && video !== "live_stream" && video !== "videoseries" ? embed(video) : null;
+  }
+  if (parts[0] === "playlist" && parts.length === 1) {
+    const list = id(url.searchParams.get("list"));
+    return list ? embed("videoseries", `list=${list}`) : null;
+  }
+  // A channel's current live stream: https://www.youtube.com/channel/UC.../live
+  if (parts[0] === "channel" && parts[2] === "live" && parts.length === 3) {
+    const channel = id(parts[1]);
+    return channel && channel.startsWith("UC") ? embed("live_stream", `channel=${channel}`) : null;
+  }
+  return null;
+}
+
 export const permissionSchema = z.union([z.boolean(), z.literal("unknown")]);
 
 const httpsUrl = z
@@ -38,7 +83,7 @@ export function cameraEntrySchema(options: { allowInsecureUrls?: boolean } = {})
         lon: z.number().min(-180).max(180),
       }),
       cameraType: z.enum(["traffic", "scenic", "public"]),
-      mediaType: z.enum(["image", "video", "link"]),
+      mediaType: z.enum(["image", "video", "youtube", "link"]),
       sourceUrl: options.allowInsecureUrls ? anyUrl : httpsUrl,
       mediaUrl: mediaUrl.optional(),
       operator: z.object({
@@ -76,6 +121,14 @@ export function cameraEntrySchema(options: { allowInsecureUrls?: boolean } = {})
           code: "custom",
           path: ["mediaUrl"],
           message: 'mediaUrl must be omitted when mediaType is "link"',
+        });
+      }
+      if (camera.mediaType === "youtube" && camera.mediaUrl && !youtubeEmbedUrl(camera.mediaUrl)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["mediaUrl"],
+          message:
+            "YouTube cameras need a youtube.com watch, live, playlist or channel/<id>/live URL",
         });
       }
       if (camera.permissions.aiAnalysisAllowed === true && camera.mediaType !== "image") {

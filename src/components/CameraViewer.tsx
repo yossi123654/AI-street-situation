@@ -103,6 +103,19 @@ export function CameraViewer({ camera, aiEnabled }: { camera: CameraView; aiEnab
             <ExternalIcon /> {t("cameras.openSource")}
           </a>
         </div>
+      ) : camera.mediaType === "youtube" && camera.embedUrl ? (
+        <iframe
+          key={camera.id}
+          src={camera.embedUrl}
+          title={t("cameras.imageAlt", { name: camera.name })}
+          className="aspect-video w-full rounded-xl bg-black"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          referrerPolicy="strict-origin-when-cross-origin"
+          sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+          allowFullScreen
+          loading="lazy"
+          data-testid="camera-youtube"
+        />
       ) : camera.mediaType === "video" && camera.videoUrl ? (
         <video
           key={camera.id}

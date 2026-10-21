@@ -1,5 +1,6 @@
 import { buildUrl, upstreamJson } from "@/lib/http";
 import type { Camera } from "@/lib/types";
+import { cachedList } from "@/providers/cameras/cachedList";
 import type { ProviderDefinition } from "@/providers/types";
 
 interface TflPlace {
@@ -27,8 +28,6 @@ export const tflJamCams: ProviderDefinition<"cameras"> = {
   requiredEnv: ["TFL_APP_KEY"],
   isEnabled: (config) => Boolean(config.TFL_APP_KEY),
   create(config) {
-    let cache: { at: number; cameras: Promise<Camera[]> } | undefined;
-
     const fetchAll = async (): Promise<Camera[]> => {
       const url = buildUrl(config.TFL_API_URL, "Place/Type/JamCam", {
         app_key: config.TFL_APP_KEY,
@@ -79,17 +78,10 @@ export const tflJamCams: ProviderDefinition<"cameras"> = {
     };
 
     return {
-      list() {
-        if (!cache || Date.now() - cache.at > 10 * 60_000) {
-          const cameras = fetchAll();
-          cache = { at: Date.now(), cameras };
-          // Do not keep a failed request cached.
-          cameras.catch(() => {
-            if (cache?.cameras === cameras) cache = undefined;
-          });
-        }
-        return cache.cameras;
-      },
+      list: cachedList(10 * 60_000, fetchAll),
+      // Greater London.
+      coverage: [[51.25, -0.56, 51.72, 0.36]],
+      idPrefix: "gb-tfl-",
       // TfL's bucket only: the S3 host alone would admit any bucket on it.
       allowedMediaHosts: () => [
         "s3-eu-west-1.amazonaws.com/jamcams.tfl.gov.uk/",

@@ -69,6 +69,14 @@ test.describe("trip planning", () => {
     await expect(page.locator(".stop-marker")).toHaveCount(4);
     await expect(page.locator(".weather-marker").first()).toBeVisible();
 
+    // Cameras along the route, in the order they are passed; the far one behind the start is not.
+    const tripCameras = page.getByTestId("trip-cameras");
+    await expect(tripCameras.locator("ol > li")).toHaveCount(2);
+    await expect(tripCameras).toContainText("Jaffa St / King George");
+    await expect(tripCameras).toContainText("Mahane Yehuda");
+    await expect(tripCameras).not.toContainText("Broken camera");
+    await expect(tripCameras.getByTestId("camera-viewer")).toBeVisible();
+
     // Parking at the destination and the AI briefing.
     await expect(page.locator("#parking")).toContainText("חניה ביעד");
     await expect(page.getByTestId("parking-list").locator("li")).toHaveCount(5);

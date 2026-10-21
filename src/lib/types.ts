@@ -222,6 +222,14 @@ export interface TripStop {
   facilities: TripFacility[];
 }
 
+/** A camera near the route; `distanceM` is its distance from the route line. */
+export interface TripCamera extends CameraView {
+  distanceAlongM: number;
+  /** Seconds after departure at which the traveller passes the camera. */
+  etaOffsetS: number;
+  roadName?: string;
+}
+
 export interface TripReport {
   from: LatLon & { label?: string };
   to: LatLon & { label?: string };
@@ -237,6 +245,8 @@ export interface TripReport {
   incidents: Section<Incident[]>;
   stops: Section<TripStop[]>;
   destinationParking: Section<ParkingFacility[]>;
+  /** Cameras close to the route, in the order the traveller passes them. */
+  cameras: Section<TripCamera[]>;
   missing: TripMissingCode[];
   confidence: Confidence;
 }
@@ -254,7 +264,8 @@ export interface Camera {
   lat: number;
   lon: number;
   cameraType: "traffic" | "scenic" | "public";
-  mediaType: "image" | "video" | "link";
+  /** "youtube": a live stream played in YouTube's embedded player. */
+  mediaType: "image" | "video" | "youtube" | "link";
   /** Human-facing page of the operator for this camera. */
   sourceUrl: string;
   /** Direct media URL (image or video). Only ever fetched by the server from the registry. */
@@ -283,6 +294,8 @@ export interface CameraView extends Omit<Camera, "mediaUrl"> {
   analyzable: boolean;
   /** Direct video URL (only for embeddable video cameras). */
   videoUrl?: string;
+  /** YouTube player URL (youtube-nocookie.com), only for embeddable YouTube cameras. */
+  embedUrl?: string;
 }
 
 /** not_live: the data only exists for "now" (e.g. live traffic) and the user asked about later. */

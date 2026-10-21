@@ -378,6 +378,13 @@
     "withPredictedTraffic": "Includes predicted traffic for that time",
     "predictedDelay": "about {minutes} min of expected delay",
     "departInvalid": "Choose a departure time within the next 7 days.",
-    "tooFarOrInvalid": "This trip can't be planned: check the departure time and distance."
+    "tooFarOrInvalid": "This trip can't be planned: check the departure time and distance.",
+    "camerasTitle": "Cameras along the route",
+    "camerasCount": "{count} cameras within 300 m of the route, in the order you pass them.",
+    "camerasNowNote": "They show conditions now, not at your departure time.",
+    "camerasNone": "No public cameras with known terms along this route yet.",
+    "camerasAdd": "Know one? Add it to the registry",
+    "cameraIn": "in {time}",
+    "cameraAtStart": "at the start"
   }
 }

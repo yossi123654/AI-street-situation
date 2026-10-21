@@ -84,6 +84,15 @@ export interface CameraProvider {
   /** All cameras known to this provider. Implementations may cache internally. */
   list(): Promise<Camera[]>;
   /**
+   * Areas this provider has cameras in, as [south, west, north, east] boxes.
+   * The registry only asks providers whose coverage overlaps the search area,
+   * so a search in Jerusalem never calls Singapore's API. Omit for providers
+   * that can have cameras anywhere (the community registry).
+   */
+  coverage?: Array<[number, number, number, number]>;
+  /** Prefix of every camera id from this provider, used to route id lookups. */
+  idPrefix?: string;
+  /**
    * Where this provider's media may be served from: hostnames, or
    * "host/path/prefix" entries for shared hosts such as S3. The image proxy
    * refuses anything else.
