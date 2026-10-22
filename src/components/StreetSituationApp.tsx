@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CamerasCard } from "@/components/CamerasCard";
 import { Header } from "@/components/Header";
+import { HomeDashboard } from "@/components/HomeDashboard";
 import { IncidentsCard } from "@/components/IncidentsCard";
 import { ParkingCard } from "@/components/ParkingCard";
 import { PhotosCard } from "@/components/PhotosCard";
@@ -128,6 +129,7 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM, photoRadiusM 
   const [mode, setMode] = useState<Mode>("place");
   const [place, setPlace] = useState<SelectedPlace | null>(null);
   const [trip, setTrip] = useState<TripSelection | null>(null);
+  const [homeArea, setHomeArea] = useState<{ lat: number; lon: number } | null>(null);
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [selectedParkingId, setSelectedParkingId] = useState<string | null>(null);
@@ -386,6 +388,7 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM, photoRadiusM 
               cameras={mode === "place" ? cameras : tripCameras}
               parking={mode === "place" ? parkingFacilities : tripParking}
               trip={mapTrip}
+              homeArea={homeArea}
               selectedCameraId={selectedCameraId}
               selectedParkingId={selectedParkingId}
               onPick={(point) => selectPlace(point, { reverseGeocode: true })}
@@ -484,7 +487,13 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM, photoRadiusM 
               </>
             )
           ) : !place ? (
-            <EmptyState />
+            <HomeDashboard
+              defaultCenter={map.defaultCenter}
+              providers={providers}
+              onOpenPlace={(point) => selectPlace(point, { reverseGeocode: !point.label })}
+              onPlanTrip={() => switchMode("trip")}
+              onAreaChange={setHomeArea}
+            />
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">

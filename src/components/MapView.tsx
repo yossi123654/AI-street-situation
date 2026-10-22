@@ -304,17 +304,17 @@ function ClickHandler({ onPick }: { onPick: (point: { lat: number; lon: number }
   return null;
 }
 
-function FlyTo({ place }: { place: SelectedPlace | null }) {
+function FlyTo({ place, minZoom = 15 }: { place: SelectedPlace | null; minZoom?: number }) {
   const map = useMap();
   const lat = place?.lat;
   const lon = place?.lon;
   useEffect(() => {
     if (lat === undefined || lon === undefined) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const zoom = Math.max(map.getZoom(), 15);
+    const zoom = Math.max(map.getZoom(), minZoom);
     if (reduceMotion) map.setView([lat, lon], zoom);
     else map.flyTo([lat, lon], zoom, { duration: 0.8 });
-  }, [map, lat, lon]);
+  }, [map, lat, lon, minZoom]);
   return null;
 }
 
@@ -324,6 +324,7 @@ export function MapView({
   cameras,
   parking,
   trip,
+  homeArea = null,
   selectedCameraId,
   selectedParkingId,
   onPick,
@@ -336,6 +337,8 @@ export function MapView({
   parking: ParkingFacility[];
   /** When set, the map shows a trip instead of a single place. */
   trip: MapTrip | null;
+  /** The home page's area, shown when no place or trip is selected. */
+  homeArea?: { lat: number; lon: number } | null;
   selectedCameraId: string | null;
   selectedParkingId: string | null;
   onPick: (point: { lat: number; lon: number }) => void;
@@ -383,7 +386,13 @@ export function MapView({
           />
         )}
         <ClickHandler onPick={onPick} />
-        {trip ? <TripLayer trip={trip} /> : <FlyTo place={place} />}
+        {trip ? (
+          <TripLayer trip={trip} />
+        ) : place ? (
+          <FlyTo place={place} />
+        ) : (
+          <FlyTo place={homeArea} minZoom={11} />
+        )}
         {place && !trip ? (
           <Marker position={[place.lat, place.lon]} icon={placeIcon} keyboard={false}>
             <Tooltip direction="top" offset={[0, -36]}>

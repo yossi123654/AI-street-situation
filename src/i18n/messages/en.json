@@ -403,5 +403,38 @@
     "notLive": "These photos are not live: each shows the place when it was taken. Faces and licence plates in street-level imagery are blurred by Panoramax.",
     "imageError": "This photo could not be loaded right now.",
     "alt": "Photo of the place"
+  },
+  "home": {
+    "title": "Your area right now",
+    "defaultArea": "Default area",
+    "source": {
+      "precise": "based on your location (rounded to ~1 km)",
+      "timezone": "approximate, based on your time zone",
+      "default": "the app's default area"
+    },
+    "usePrecise": "Use my exact location",
+    "geoError": "Your location is not available. Showing an approximate area instead.",
+    "openReport": "Full situation report",
+    "weatherUnavailable": "Weather is not available right now.",
+    "highLow": "High / low today",
+    "rainChance": "Chance of rain",
+    "uv": "UV index",
+    "sunset": "Sunset (local)",
+    "weatherSource": "Open-Meteo · updated {time}",
+    "unavailable": "Not available right now.",
+    "camerasTitle": "Cameras in your area",
+    "camerasWithin": "public cameras within {radius}",
+    "camerasLive": "{count} show a live image here",
+    "camerasNone": "No public cameras with known terms here yet.",
+    "camerasHelp": "Help add some",
+    "photosTitle": "What it looks like",
+    "photosNear": "published photos nearby",
+    "photosNone": "No published photos near here yet.",
+    "tripTitle": "Going somewhere?",
+    "tripBody": "Route and arrival time, traffic and weather along the way, cameras on the road, stops and parking at the destination.",
+    "tripAction": "Plan a trip",
+    "openTitle": "Open data, open source",
+    "sourcesActive": "data sources active on this server",
+    "privacy": "No accounts, no tracking, no analytics."
   }
 }
