@@ -36,7 +36,8 @@ function presetDescription(presetId: string): string {
   if (code === "01") return "Camera view: direction 1";
   if (code === "02") return "Camera view: direction 2";
   if (code === "09") return "Camera view: road surface";
-  return `Camera view ${Number(code) || code}`;
+  const n = Number(code);
+  return Number.isFinite(n) && n > 0 ? `Camera view ${n}` : "Camera view";
 }
 
 /**

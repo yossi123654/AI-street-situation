@@ -27,9 +27,28 @@ const HOURLY_VARS = [
 ] as const;
 type HourlyVar = (typeof HOURLY_VARS)[number];
 
+const DAILY_VARS = [
+  "temperature_2m_max",
+  "temperature_2m_min",
+  "precipitation_probability_max",
+  "uv_index_max",
+  "sunrise",
+  "sunset",
+] as const;
+
 interface OpenMeteoResponse {
   latitude?: number;
   longitude?: number;
+  utc_offset_seconds?: number;
+  daily?: {
+    time?: string[];
+    temperature_2m_max?: Array<number | null>;
+    temperature_2m_min?: Array<number | null>;
+    precipitation_probability_max?: Array<number | null>;
+    uv_index_max?: Array<number | null>;
+    sunrise?: string[];
+    sunset?: string[];
+  };
   current?: { time: string; interval?: number } & Partial<Record<CurrentVar, number | null>>;
   hourly?: { time: string[] } & Partial<Record<HourlyVar, Array<number | null>>>;
 }
@@ -53,6 +72,16 @@ export function nearestHourIndex(times: string[], at: Date): number {
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+/** "2026-10-22T06:47" in a zone with the given UTC offset → ISO with that offset. */
+export function withOffset(local: string | undefined, offsetSeconds: number): string | undefined {
+  if (!local || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return undefined;
+  const sign = offsetSeconds < 0 ? "-" : "+";
+  const abs = Math.abs(offsetSeconds);
+  const hh = String(Math.floor(abs / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((abs % 3600) / 60)).padStart(2, "0");
+  return `${local}:00${sign}${hh}:${mm}`;
+}
 
 export const openMeteo: ProviderDefinition<"weather"> = {
   id: "open-meteo",
@@ -90,6 +119,34 @@ export const openMeteo: ProviderDefinition<"weather"> = {
           visibilityM: num(c.visibility),
           isDay: isDay === null ? null : isDay === 1,
           source: sourceFrom(openMeteo, new Date(observedAt).toISOString()),
+        };
+      },
+      async today(point) {
+        const url = buildUrl(config.OPEN_METEO_URL, "v1/forecast", {
+          latitude: point.lat.toFixed(3),
+          longitude: point.lon.toFixed(3),
+          daily: DAILY_VARS.join(","),
+          // "auto": the place's own day and sunrise/sunset in its local time.
+          timezone: "auto",
+          forecast_days: 1,
+        });
+        const data = await upstreamJson<OpenMeteoResponse>(url, { providerId: openMeteo.id });
+        const d = data.daily;
+        const date = d?.time?.[0];
+        if (!d || !date) throw new Error("open-meteo response has no daily forecast");
+        const offset = data.utc_offset_seconds ?? 0;
+        const sunrise = withOffset(d.sunrise?.[0], offset);
+        const sunset = withOffset(d.sunset?.[0], offset);
+        return {
+          date,
+          temperatureMaxC: num(d.temperature_2m_max?.[0]),
+          temperatureMinC: num(d.temperature_2m_min?.[0]),
+          precipitationProbabilityPct: num(d.precipitation_probability_max?.[0]),
+          uvIndexMax: num(d.uv_index_max?.[0]),
+          ...(sunrise ? { sunrise } : {}),
+          ...(sunset ? { sunset } : {}),
+          // A forecast, not an observation: no observedAt.
+          source: sourceFrom(openMeteo),
         };
       },
       async forecastAt(points) {

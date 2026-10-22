@@ -9,6 +9,8 @@ says which source each fact came from and what is missing.
 
 **Live, with real data and no API keys** (OpenFreeMap map, Nominatim, Open-Meteo, OpenStreetMap parking):
 
+![Home page: your area right now (Helsinki, real data)](docs/screenshots/real-home-helsinki-en.png)
+
 ![Jerusalem, Hebrew (RTL), real data](docs/screenshots/real-jerusalem-he.png)
 
 |                                                                            |                                                                    |
@@ -45,6 +47,12 @@ street grid.
 - **Search in Hebrew or English** for streets, junctions, addresses and areas,
   or click on the map. Shareable URLs (`?lat=…&lon=…`).
 - **Weather** from Open-Meteo (free, no key).
+- **A home page about your area**: the weather now and today (high/low,
+  rain chance, UV, sunset), how many public cameras there are within 50 km
+  with a live preview, published photos nearby, and quick links to a full
+  report or a trip. Your exact location is used only if you allow it, and
+  is rounded to about 1 km; otherwise the area comes from your browser's
+  time zone, with no IP lookup.
 - **Traffic flow and incidents** from TomTom or HERE (bring your own key),
   merged with **open road-work feeds** in the WZDx standard.
 - **Parking search**: nearby car parks from OpenStreetMap with type,

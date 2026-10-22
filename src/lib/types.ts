@@ -55,6 +55,18 @@ export interface WeatherData {
   source: SourceInfo;
 }
 
+/** Today's outlook at a place (local day). Times are ISO 8601 with the place's UTC offset. */
+export interface DailyOutlook {
+  date: string;
+  temperatureMaxC: number | null;
+  temperatureMinC: number | null;
+  precipitationProbabilityPct: number | null;
+  uvIndexMax: number | null;
+  sunrise?: string;
+  sunset?: string;
+  source: SourceInfo;
+}
+
 export type TrafficLevel = "free" | "moderate" | "heavy" | "severe" | "closed" | "unknown";
 
 export interface TrafficFlow {
@@ -388,6 +400,21 @@ export interface StreetPhoto {
   license: { name: string; url?: string };
   /** The photo's page at the source, for credit and the full-size view. */
   pageUrl: string;
+}
+
+/** The home page's "your area" overview. */
+export interface AreaSummary {
+  point: LatLon;
+  weather: Section<WeatherData>;
+  today: Section<DailyOutlook>;
+  cameras: {
+    radiusM: number;
+    count: number;
+    /** Cameras whose images may be shown inline. */
+    embeddableCount: number;
+    /** A few nearby cameras, embeddable ones first. */
+    preview: CameraView[];
+  };
 }
 
 export type ProviderKind =

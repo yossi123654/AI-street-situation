@@ -9,7 +9,7 @@ test.describe("with all providers configured", () => {
     await page.goto("/");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator("html")).toHaveAttribute("lang", "he");
-    await expect(page.getByRole("heading", { name: "בחרו מקום כדי לקבל תמונת מצב" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "האזור שלך עכשיו" })).toBeVisible();
     // Vector base map (MapLibre inside Leaflet) with its attribution.
     await expect(page.locator(".leaflet-container canvas.maplibregl-canvas")).toBeVisible();
     await expect(page.locator(".leaflet-control-attribution")).toContainText("Test vector style");
@@ -237,5 +237,62 @@ test.describe("with all providers configured", () => {
     expect(await api.text()).not.toContain("thumb.jpg");
     expect((await page.request.get("/api/photos/panoramax-nope/image")).status()).toBe(404);
     expect((await page.request.get("/api/photos/..%2Fetc/image")).status()).toBe(400);
+  });
+
+  test.describe("home page", () => {
+    test.use({ timezoneId: "Asia/Jerusalem" });
+
+    test("without location: approximate area from the time zone, weather and today", async ({
+      page,
+    }) => {
+      await page.goto("/");
+      await expect(page.getByTestId("home-area")).toContainText("תל אביב, ישראל");
+      await expect(page.getByTestId("home-area")).toContainText("משוער, לפי אזור הזמן שלך");
+      await expect(page.getByTestId("home-temp")).toHaveText("23°");
+      const today = page.getByTestId("home-today");
+      await expect(today).toContainText("28° / 16°");
+      await expect(today).toContainText("10%");
+      await expect(today).toContainText("17:59");
+      // The test cameras are in Jerusalem, more than 50 km from Tel Aviv.
+      await expect(page.getByTestId("home-camera-count")).toHaveText("0");
+      await expect(page.getByTestId("home-cameras")).toContainText("עזרו להוסיף");
+      await expect(page.getByTestId("home-locate")).toBeVisible();
+      await page.getByTestId("home-plan-trip").click();
+      await expect(page.getByTestId("trip-from")).toBeVisible();
+    });
+  });
+
+  test.describe("home page with location", () => {
+    test.use({
+      timezoneId: "Asia/Jerusalem",
+      permissions: ["geolocation"],
+      geolocation: { latitude: 31.7833, longitude: 35.2186 },
+    });
+
+    test("uses the shared location (rounded) and shows cameras and photos nearby", async ({
+      page,
+    }) => {
+      const areaRequests: string[] = [];
+      page.on("request", (request) => {
+        if (request.url().includes("/api/area")) areaRequests.push(request.url());
+      });
+      await page.goto("/");
+      await expect(page.getByTestId("home-area")).toContainText("לפי המיקום שלך");
+      await expect(page.getByTestId("home-area")).toContainText("רחוב יפו");
+      await expect(page.getByTestId("home-camera-count")).toHaveText("3");
+      await expect(page.getByTestId("home-cameras")).toContainText("2 מציגות כאן תמונה חיה");
+      await expect(page.getByTestId("home-camera-preview").locator("img")).toHaveAttribute(
+        "src",
+        "/api/cameras/il-test-jaffa-center/image",
+      );
+      await expect(page.getByTestId("home-photos").locator("img")).toHaveCount(4);
+      await expect(page.getByTestId("home-locate")).toHaveCount(0);
+      // The browser never sends more than ~1 km precision to the server.
+      expect(areaRequests.some((url) => url.includes("lat=31.78&lon=35.22"))).toBe(true);
+      await snap(page, "13-home-he");
+
+      await page.getByTestId("home-open").click();
+      await expect(page.getByTestId("weather")).toContainText("23°");
+    });
   });
 });

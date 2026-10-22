@@ -1,3 +1,4 @@
+import { AreaService } from "@/services/AreaService";
 import { CameraAvailabilityService } from "@/services/CameraAvailabilityService";
 import { CameraImageService } from "@/services/CameraImageService";
 import { CameraRegistry } from "@/services/CameraRegistry";
@@ -20,6 +21,7 @@ function createServices() {
   const parking = new ParkingService();
   const trip = new TripService(parking, cameras);
   const photos = new PhotoService();
+  const area = new AreaService(cameras);
   const summary = new SituationSummaryService(situation, cameras, vision, parking, trip, location);
   return {
     location,
@@ -31,6 +33,7 @@ function createServices() {
     parking,
     trip,
     photos,
+    area,
     summary,
   };
 }

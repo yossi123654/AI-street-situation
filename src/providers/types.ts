@@ -1,6 +1,7 @@
 import type { AppConfig } from "@/lib/config";
 import type {
   Camera,
+  DailyOutlook,
   Incident,
   LatLon,
   Locale,
@@ -33,6 +34,8 @@ export interface WeatherProvider {
    * ahead). Optional: providers without forecasts can omit it.
    */
   forecastAt?(points: Array<LatLon & { at: Date }>): Promise<PointForecast[]>;
+  /** Today's high, low, rain chance, UV and sun times at the point. Optional. */
+  today?(point: LatLon): Promise<DailyOutlook>;
 }
 
 export interface PointForecast {

@@ -268,6 +268,24 @@ const server = createServer(async (req, res) => {
     const now = new Date(Math.floor(Date.now() / 900_000) * 900_000);
     const lats = q.get("latitude").split(",").map(Number);
     const lons = q.get("longitude").split(",").map(Number);
+    if (q.has("daily")) {
+      const day = new Date().toISOString().slice(0, 10);
+      return send(res, 200, {
+        latitude: lats[0],
+        longitude: lons[0],
+        utc_offset_seconds: 10800,
+        timezone: "Asia/Jerusalem",
+        daily: {
+          time: [day],
+          temperature_2m_max: [27.6],
+          temperature_2m_min: [16.2],
+          precipitation_probability_max: [10],
+          uv_index_max: [5.5],
+          sunrise: [`${day}T06:47`],
+          sunset: [`${day}T17:59`],
+        },
+      });
+    }
     if (lats.length > 1 || q.has("hourly")) {
       const hourStart = Math.floor(Date.now() / 3_600_000) * 3_600_000;
       const times = Array.from({ length: 48 }, (_, i) =>
