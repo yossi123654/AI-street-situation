@@ -40,6 +40,7 @@ const minimalEnv = {
   // Parking and stops come from the mock Overpass, not the shipped OSM extract.
   OSM_EXTRACT_DIR: "tests/fixtures/no-osm-extract",
   // Photo sources serve images over http from the mock, which only the full server allows.
+  SITE_NOTICE: "demo",
   PANORAMAX_ENABLED: "false",
   WIKIMEDIA_COMMONS_ENABLED: "false",
   // Open camera feeds only answer searches in their own country; keep them offline anyway.

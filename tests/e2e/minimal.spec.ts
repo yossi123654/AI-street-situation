@@ -5,6 +5,8 @@ import { snap } from "./screenshots";
 
 test("works without any API key and says clearly what is missing", async ({ page }) => {
   await page.goto("/");
+  // SITE_NOTICE=demo shows the translated demo banner.
+  await expect(page.getByTestId("site-notice")).toContainText("הדגמה ציבורית");
   await page.getByTestId("search-input").fill("רחוב יפו ירושלים");
   await page.getByTestId("search-submit").click();
 

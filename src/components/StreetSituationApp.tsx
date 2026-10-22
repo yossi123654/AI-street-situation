@@ -63,6 +63,8 @@ interface Props {
   cameraRadiusM: number;
   parkingRadiusM: number;
   photoRadiusM: number;
+  /** Operator notice for every page ("demo" = built-in demo notice). */
+  siteNotice?: string;
 }
 
 export function StreetSituationApp(props: Props) {
@@ -124,7 +126,14 @@ function writeTripToUrl(trip: TripSelection) {
   window.history.replaceState(null, "", `?${params.toString()}`);
 }
 
-function AppInner({ map, providers, cameraRadiusM, parkingRadiusM, photoRadiusM }: Props) {
+function AppInner({
+  map,
+  providers,
+  cameraRadiusM,
+  parkingRadiusM,
+  photoRadiusM,
+  siteNotice,
+}: Props) {
   const { t, locale, formatRelative } = useI18n();
   const [mode, setMode] = useState<Mode>("place");
   const [place, setPlace] = useState<SelectedPlace | null>(null);
@@ -335,6 +344,15 @@ function AppInner({ map, providers, cameraRadiusM, parkingRadiusM, photoRadiusM 
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {siteNotice ? (
+        <p
+          role="note"
+          className="bg-amber-50 px-4 py-1.5 text-center text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          data-testid="site-notice"
+        >
+          {siteNotice === "demo" ? t("app.demoNotice") : siteNotice}
+        </p>
+      ) : null}
       <Header />
 
       <div className="border-b border-slate-200 bg-white/70 dark:border-slate-800 dark:bg-slate-900/60">

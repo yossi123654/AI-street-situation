@@ -1,0 +1,24 @@
+# Render Blueprint: one-click deploy of a public demo.
+# https://render.com/deploy?repo=https://github.com/yossi123654/ai-street-situation
+# See docs/deploy.md before making a deployment public.
+services:
+  - type: web
+    name: ai-street-situation
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: "3000"
+      # Render's proxy sets X-Forwarded-For; trust it for per-visitor rate limits.
+      - key: TRUST_PROXY
+        value: "true"
+      - key: SITE_NOTICE
+        value: demo
+      # Identify your deployment to Nominatim and other public services
+      # (include your own contact URL or email).
+      - key: APP_USER_AGENT
+        sync: false
+      - key: NOMINATIM_EMAIL
+        sync: false

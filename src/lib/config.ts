@@ -37,6 +37,11 @@ const int = (fallback: number, min: number, max: number) =>
     .default(fallback);
 
 const schema = z.object({
+  /**
+   * A one-line notice shown at the top of every page, e.g. on a public demo.
+   * "demo" shows the built-in, translated demo notice; any other text is shown as is.
+   */
+  SITE_NOTICE: optionalString,
   APP_USER_AGENT: z
     .string()
     .trim()
