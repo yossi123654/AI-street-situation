@@ -1,5 +1,6 @@
 import { TtlCache } from "@/lib/cache";
 import { haversineMeters, parseLatLon, roundCoord } from "@/lib/geo";
+import { inNamedCity, normalizeHebrewQuery, queryVariants } from "@/lib/hebrewQuery";
 import type { LatLon, Locale, Place } from "@/lib/types";
 import { getProvider } from "@/providers/registry";
 
@@ -70,9 +71,22 @@ export class LocationService {
     }
     const { def, instance } = this.provider();
     const key = `${def.id}:${locale}:${normalized.toLocaleLowerCase()}`;
-    return this.searchCache.getOrSet(key, DAY_MS, async () =>
-      collapseToSettlement(dedupePlaces(await instance.search(normalized, locale))),
-    );
+    return this.searchCache.getOrSet(key, DAY_MS, async () => {
+      // Hebrew addresses are rewritten into the form geocoders understand
+      // ("רח' הרצל 10 ת"א" → "הרצל 10 תל אביב"), with the original text and a
+      // street-only query as fallbacks. At most three upstream calls.
+      // City names are read from the rewritten query, so "פ"ת" counts as Petah Tikva
+      // for every variant, including the original text.
+      const cityQuery = normalizeHebrewQuery(normalized);
+      for (const variant of queryVariants(normalized)) {
+        // When the query names a city, results in other towns are wrong answers.
+        // (Only checkable when results come back with Hebrew names.)
+        const found = await instance.search(variant, locale);
+        const places = locale === "he" ? inNamedCity(found, cityQuery) : found;
+        if (places.length > 0) return collapseToSettlement(dedupePlaces(places));
+      }
+      return [];
+    });
   }
 
   async reverse(point: LatLon, locale: Locale): Promise<Place | null> {

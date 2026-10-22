@@ -53,6 +53,10 @@ street grid.
   report or a trip. Your exact location is used only if you allow it, and
   is rounded to about 1 km; otherwise the area comes from your browser's
   time zone, with no IP lookup.
+- **Hebrew addresses typed the Israeli way**: "רח' הרצל 10 ת"א", "שד'
+  רוטשילד" or "בן יהודה 5 י-ם" are rewritten before geocoding (prefixes,
+  abbreviations, Hebrew quote marks), and results in the wrong city are
+  dropped.
 - **Traffic flow and incidents** from TomTom or HERE (bring your own key),
   merged with **open road-work feeds** in the WZDx standard.
 - **Parking search**: nearby car parks from OpenStreetMap with type,

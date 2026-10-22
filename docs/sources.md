@@ -87,6 +87,26 @@ issue or a pull request that updates this file.
 
 ## Geocoding
 
+### Hebrew addresses (all geocoders)
+
+OSM geocoders know Israeli streets, but not how people type them. Measured
+against Nominatim on 2026-10-22: "רחוב יפו 23 ירושלים", "רח' הרצל 10 תל אביב"
+and "רחוב הנביאים, ירושלים" found nothing, and "שד' רוטשילד 1 ת"א", "בן יהודה
+5 י-ם" and "ז׳בוטינסקי 7 ר"ג" were matched to streets in the wrong city. The
+app therefore rewrites Hebrew queries before geocoding
+(`src/lib/hebrewQuery.ts`):
+
+- drops the "רחוב / רח'" prefix and expands "שד'", "סמ'" and "כ"כ";
+- expands city abbreviations (ת"א, י-ם, ב"ש, פ"ת, ר"ג, ראשל"צ, כ"ס, ב"ב…);
+- unifies Hebrew and typographic quote marks (״ ׳ “ ”);
+- tries the rewritten query, then the original text, then the street
+  without the house number (at most three upstream calls, cached for a day);
+- when the query names a city, drops results in other towns (ignoring
+  district names such as "נפת פתח תקווה"), so a wrong match is reported as
+  "no results" rather than shown as the answer.
+
+With these rules all the queries above find the right place.
+
 ### Nominatim (default)
 
 - URL: `https://nominatim.openstreetmap.org` (`NOMINATIM_URL`)
