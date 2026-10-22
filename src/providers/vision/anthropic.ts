@@ -52,7 +52,6 @@ export const anthropic: ProviderDefinition<"ai"> = {
             body: JSON.stringify({
               model: config.ANTHROPIC_MODEL,
               max_tokens: 1024,
-              temperature: 0.2,
               system,
               messages: [{ role: "user", content }],
             }),
