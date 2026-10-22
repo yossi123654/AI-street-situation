@@ -87,6 +87,20 @@ docker compose --profile ollama up --build     # כולל Ollama מקומי
 
 <div dir="rtl">
 
+### העלאת הדגמה ציבורית
+
+</div>
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yossi123654/ai-street-situation)
+
+```bash
+docker run --rm -p 3000:3000 ghcr.io/yossi123654/ai-street-situation:latest
+```
+
+<div dir="rtl">
+
+בלחיצה אחת ב-Render ([`render.yaml`](render.yaml)), עם `fly deploy` ב-Fly.io ([`fly.toml`](fly.toml)), או בכל שרת עם Docker. הצעדים ורשימת הבדיקות לפני שמשתפים קישור ציבורי נמצאים ב-[docs/deploy.md](docs/deploy.md).
+
 ### לפני פרסום לציבור
 
 ברירות המחדל מצביעות על שירותים קהילתיים חינמיים: ל-OpenFreeMap אין מגבלת שימוש אבל גם אין התחייבות לזמינות, שרת Overpass (חניה) משותף לכל הקהילה ולשימוש כבד כדאי להריץ שרת עצמי, Nominatim מגביל לבקשה אחת בשנייה לכל השרת (האפליקציה אוכפת זאת ושומרת תוצאות ב-cache), וה-API החינמי של Open-Meteo מיועד לשימוש לא מסחרי. פרטים מלאים ב-[docs/sources.md](docs/sources.md).

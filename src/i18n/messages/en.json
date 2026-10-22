@@ -3,7 +3,8 @@
     "title": "Street Situation",
     "tagline": "What's happening right now at any street, junction or area: traffic, incidents, weather and public cameras.",
     "github": "Source code on GitHub",
-    "language": "Language"
+    "language": "Language",
+    "demoNotice": "Public demo running on free, shared data sources: it can be slow or rate-limited. For regular use, run your own copy (it's free and open source)."
   },
   "search": {
     "placeholder": "Type a street, address, junction or area, e.g. Jaffa Street, Jerusalem",

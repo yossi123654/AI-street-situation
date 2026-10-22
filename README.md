@@ -136,6 +136,14 @@ active and which variables each one needs.
 
 ### Docker
 
+The published image needs no build:
+
+```bash
+docker run --rm -p 3000:3000 ghcr.io/yossi123654/ai-street-situation:latest
+```
+
+Or build it yourself with Compose:
+
 ```bash
 docker compose up --build                      # app on http://localhost:3000
 docker compose --profile ollama up --build     # app + local Ollama
@@ -148,6 +156,15 @@ deployment.
 
 Behind an outbound proxy, start the server with `NODE_USE_ENV_PROXY=1`
 (Node ≥ 22.21) so that `fetch` honours `HTTPS_PROXY`.
+
+### Deploy a public demo
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/yossi123654/ai-street-situation)
+
+One click with Render ([`render.yaml`](render.yaml)), `fly deploy` with
+Fly.io ([`fly.toml`](fly.toml)), or any server with Docker. See
+[docs/deploy.md](docs/deploy.md) for the steps and the checklist before
+sharing a public link.
 
 ### Before you deploy publicly
 
