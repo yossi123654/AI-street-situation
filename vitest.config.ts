@@ -8,5 +8,7 @@ export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts"],
     environment: "node",
+    // Tests mock Overpass; keep the shipped OSM extract out of them unless a test opts in.
+    env: { OSM_EXTRACT_DIR: "tests/fixtures/no-osm-extract" },
   },
 });

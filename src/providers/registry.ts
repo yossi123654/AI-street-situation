@@ -11,6 +11,7 @@ import { photon } from "@/providers/geocoding/photon";
 import { hereIncidents } from "@/providers/incidents/here";
 import { tomtomIncidents } from "@/providers/incidents/tomtom";
 import { wzdxIncidents } from "@/providers/incidents/wzdx";
+import { osmExtractParking, osmExtractStops } from "@/providers/osm/providers";
 import { overpassParking } from "@/providers/parking/overpass";
 import { panoramax } from "@/providers/photos/panoramax";
 import { wikimediaCommons } from "@/providers/photos/wikimediaCommons";
@@ -47,10 +48,13 @@ export const ALL_PROVIDERS: ProviderDefinition[] = [
   digitrafficCameras,
   singaporeCameras,
   hongKongCameras,
+  // parking and stops: the prebuilt extract first (it falls back to Overpass outside its area).
+  osmExtractParking,
   overpassParking,
   // routing: TomTom first when keyed (traffic-aware), OSRM is the free default.
   tomtomRouting,
   osrm,
+  osmExtractStops,
   overpassStops,
   panoramax,
   wikimediaCommons,
