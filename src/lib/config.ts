@@ -90,6 +90,12 @@ const schema = z.object({
   DEV_ALLOW_INSECURE_MEDIA: bool(false),
 
   PARKING_ENABLED: bool(true),
+  /**
+   * Prebuilt OpenStreetMap extracts (data/osm/*.json.gz) answer parking and
+   * stops queries inside their area from memory; Overpass is used elsewhere.
+   */
+  OSM_EXTRACT_ENABLED: bool(true),
+  OSM_EXTRACT_DIR: z.string().trim().default("data/osm"),
   /** Overpass endpoints, tried in order (public instances are often overloaded). */
   OVERPASS_URLS: z
     .string()

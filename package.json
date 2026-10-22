@@ -23,7 +23,8 @@
     "test:e2e": "playwright test",
     "validate:cameras": "node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/validate-cameras.ts",
     "check": "npm run lint && npm run typecheck && npm run validate:cameras && npm test",
-    "screenshots": "SCREENSHOTS=1 playwright test"
+    "screenshots": "SCREENSHOTS=1 playwright test",
+    "osm:extract": "node scripts/build-osm-extract.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-gl-leaflet": "0.1.4",

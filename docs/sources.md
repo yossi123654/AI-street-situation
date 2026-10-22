@@ -185,7 +185,27 @@ default and the UI says so.
 
 ## Parking
 
-### OpenStreetMap via the Overpass API (default)
+### Prebuilt OpenStreetMap extract (default inside Israel)
+
+- `data/osm/il.json.gz`: car parks, fuel stations, EV chargers, rest areas
+  and motorway services in Israel and the Palestinian territories (the bbox
+  of the Geofabrik / openstreetmap.fr extract), with only the tags the app
+  reads: 15,751 features in 246 KB on 2026-10-22 (13,937 car parks, 1,503
+  fuel stations, 192 EV chargers, 118 rest areas and services). Built with
+  `npm run osm:extract` from the `.osm.pbf` extract using `osmium`, and
+  refreshed weekly by a GitHub Actions workflow that opens a pull request.
+- Parking and "stops along the route" queries that fall entirely inside the
+  extract's outline are answered from memory: no network call, no load on public
+  Overpass servers, and no failures when they are overloaded (which happened
+  often during development). Searches elsewhere use Overpass as below.
+- Freshness: the extract records the OSM data timestamp, shown as the source
+  time. Weekly is plenty for car parks and fuel stations.
+- Licence: the files are © OpenStreetMap contributors under the **ODbL**,
+  not the project's MIT licence (see `data/osm/README.md`).
+- Switch off with `OSM_EXTRACT_ENABLED=false`; add regions in
+  `data/osm/regions.json`.
+
+### OpenStreetMap via the Overpass API (everywhere else)
 
 - Endpoints (`OVERPASS_URLS`, tried in order, from the OSM wiki's list of
   public instances):

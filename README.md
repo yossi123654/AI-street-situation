@@ -58,7 +58,9 @@ street grid.
 - **Parking search**: nearby car parks from OpenStreetMap with type,
   capacity, fee, access and opening hours, filters (free / public), map
   markers and one-tap navigation in Waze, Google Maps or OpenStreetMap. No
-  key needed. (OSM has no live occupancy, and the app says so.)
+  key needed. (OSM has no live occupancy, and the app says so.) In Israel
+  parking and stops come from a prebuilt OpenStreetMap extract that ships
+  with the app, so they work even when public Overpass servers are down.
 - **Trip planning**: "Jerusalem → Tel Aviv" gives the route on the map,
   distance and travel time, the **weather along the route for the time you
   will be at each point**, fuel stations and rest areas on the way with

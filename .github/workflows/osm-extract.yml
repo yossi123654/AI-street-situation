@@ -1,0 +1,43 @@
+name: Refresh OpenStreetMap extract
+
+on:
+  schedule:
+    # Mondays at 03:17 UTC.
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install osmium
+        run: sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+      - name: Download the Israel and Palestine extract (Geofabrik)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/il.osm.pbf" https://download.geofabrik.de/asia/israel-and-palestine-latest.osm.pbf
+          curl -fsSL -o "$RUNNER_TEMP/il.poly" https://download.geofabrik.de/asia/israel-and-palestine.poly
+      - name: Rebuild data/osm/il.json.gz
+        run: node scripts/build-osm-extract.mjs il --pbf="$RUNNER_TEMP/il.osm.pbf" --poly="$RUNNER_TEMP/il.poly"
+      - name: Open a pull request if the data changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/osm-extract
+          commit-message: "Refresh OpenStreetMap extract (data/osm/il.json.gz)"
+          title: "Refresh OpenStreetMap extract"
+          body: |
+            Weekly rebuild of `data/osm/il.json.gz` (parking and roadside stops)
+            from the Geofabrik extract of Israel and Palestine, by
+            `.github/workflows/osm-extract.yml`.
+
+            Data © OpenStreetMap contributors, ODbL.
+          add-paths: data/osm/*.json.gz
+          delete-branch: true
