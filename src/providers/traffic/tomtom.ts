@@ -1,4 +1,4 @@
-import { buildUrl, upstreamJson } from "@/lib/http";
+import { buildUrl, UpstreamError, upstreamJson } from "@/lib/http";
 import { sourceFrom } from "@/providers/source";
 import { congestionFromSpeeds, levelFromSpeedRatio } from "@/providers/traffic/level";
 import type { ProviderDefinition } from "@/providers/types";
@@ -30,7 +30,16 @@ export const tomtomTraffic: ProviderDefinition<"traffic"> = {
           "traffic/services/4/flowSegmentData/absolute/10/json",
           { point: `${point.lat},${point.lon}`, unit: "KMPH", key: config.TOMTOM_API_KEY },
         );
-        const data = await upstreamJson<FlowSegmentResponse>(url, { providerId: tomtomTraffic.id });
+        let data: FlowSegmentResponse;
+        try {
+          data = await upstreamJson<FlowSegmentResponse>(url, { providerId: tomtomTraffic.id });
+        } catch (error) {
+          // HTTP 400 "Point too far from nearest existing segment": no road with
+          // flow data near the point, including whole countries TomTom does not
+          // cover (e.g. Israel). That is "no data here", not a failure.
+          if (error instanceof UpstreamError && error.status === 400) return [];
+          throw error;
+        }
         const s = data.flowSegmentData;
         if (!s) return [];
         const current = typeof s.currentSpeed === "number" ? s.currentSpeed : null;

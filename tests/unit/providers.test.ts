@@ -193,6 +193,23 @@ describe("tomtom", () => {
     });
   });
 
+  it("treats 'no segment near the point' as no data, not an error", async () => {
+    restore = withEnv({ TOMTOM_API_KEY: "secret", TOMTOM_URL: "https://tt.example.org" });
+    mockFetch(() =>
+      jsonResponse(
+        { error: "Point too far from nearest existing segment.", httpStatusCode: 400 },
+        400,
+      ),
+    );
+    await expect(tomtomTraffic.create(getConfig()).flow(point, 500)).resolves.toEqual([]);
+  });
+
+  it("still fails on other TomTom errors", async () => {
+    restore = withEnv({ TOMTOM_API_KEY: "secret", TOMTOM_URL: "https://tt.example.org" });
+    mockFetch(() => jsonResponse({ error: "Forbidden" }, 403));
+    await expect(tomtomTraffic.create(getConfig()).flow(point, 500)).rejects.toThrow("HTTP 403");
+  });
+
   it("maps incident categories, severity and distance", async () => {
     restore = withEnv({ TOMTOM_API_KEY: "secret", TOMTOM_URL: "https://tt.example.org" });
     mockFetch((url) => {
